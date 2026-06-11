@@ -138,7 +138,7 @@ public sealed class BleAdvertisementScanner : IDisposable
             args.Timestamp);
 
         _logger.LogInformation(
-            "Advertisement: address={Address} (RPA — session-scoped, do not persist) addressType={AddressType} "
+            "Advertisement: address={Address} (RPA - session-scoped, do not persist) addressType={AddressType} "
             + "name={Name} services=[{Services}] rssi={Rssi} dBm type={Type}",
             FormatAddress(report.Address),
             report.AddressType,

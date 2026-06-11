@@ -130,7 +130,7 @@ public sealed class BleHeartRateSource : IHeartRateSource
 
         _deviceName = string.IsNullOrEmpty(report.LocalName) ? "<unnamed>" : report.LocalName;
         _logger.LogInformation(
-            "Selected device: address={Address} (RPA — session-scoped, do not persist) name={Name} rssi={Rssi} dBm",
+            "Selected device: address={Address} (RPA - session-scoped, do not persist) name={Name} rssi={Rssi} dBm",
             BleAdvertisementScanner.FormatAddress(report.Address),
             _deviceName,
             report.RssiDbm);
@@ -216,7 +216,7 @@ public sealed class BleHeartRateSource : IHeartRateSource
         }
 
         _logger.LogInformation(
-            "GATT access denied or device unreachable — attempting pairing "
+            "GATT access denied or device unreachable - attempting pairing "
             + "(responding to the SMP Security Request; confirm any prompt on the tracker)");
 
         var status = await PairingHandler.PairAsync(_device.DeviceInformation, _logger);

@@ -35,7 +35,7 @@ public sealed class ProbeOptions
     public int IntervalMs { get; private init; } = 1000;
 
     public static string Usage => """
-        PulseRelay.Probe — heart-rate BLE probe and OSC bridge
+        PulseRelay.Probe - heart-rate BLE probe and OSC bridge
 
         Commands:
           scan --service 180D        Scan for devices advertising the Heart Rate Service (Windows only)

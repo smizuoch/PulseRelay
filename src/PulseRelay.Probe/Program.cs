@@ -28,7 +28,7 @@ using var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) =>
 {
     e.Cancel = true;
-    logger.LogInformation("Ctrl+C — shutting down");
+    logger.LogInformation("Ctrl+C - shutting down");
     cts.Cancel();
 };
 
@@ -158,7 +158,7 @@ static async Task<int> RunScanAsync(
     if (count == 0)
     {
         logger.LogWarning(
-            "No advertisements at all — check the Bluetooth radio and Windows Settings > Privacy & security > "
+            "No advertisements at all - check the Bluetooth radio and Windows Settings > Privacy & security > "
             + "Bluetooth. If scan --all shows devices but scan --service 180D shows none, the tracker is not "
             + "advertising the Heart Rate Service (is 'HR on equipment' open and not connected elsewhere?).");
     }
@@ -172,7 +172,7 @@ static async Task<int> RunConnectAsync(
     logger.LogInformation("=== Heart-rate sharing checklist (cannot be automated) ===");
     logger.LogInformation("1. On the tracker, open the 'HR on equipment' tile and keep the screen awake.");
     logger.LogInformation("2. When the tracker asks to share heart rate, tap Share, then tap Start.");
-    logger.LogInformation("3. The tracker connects to ONE equipment/app at a time — disconnect others first.");
+    logger.LogInformation("3. The tracker connects to ONE equipment/app at a time - disconnect others first.");
     logger.LogInformation("===========================================================");
 
     var source = new BleHeartRateSource(
