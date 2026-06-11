@@ -9,9 +9,9 @@ using PulseRelay.Core.HeartRate;
 namespace PulseRelay.Desktop.ViewModels;
 
 /// <summary>
-/// Main-screen view model. Mirrors the latest <see cref="BridgeSnapshot"/> onto bindable
+/// Main-screen view model. Mirrors the latest <see cref="SupervisorSnapshot"/> onto bindable
 /// properties; a 1-second ticker refreshes the freshness line and stale detection without
-/// touching the session.
+/// touching the supervisor.
 /// </summary>
 public sealed partial class DashboardViewModel : ObservableObject, IDisposable
 {
@@ -21,7 +21,7 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     private static readonly IBrush WarnBrush = new SolidColorBrush(Color.Parse("#C9A227"));
     private static readonly IBrush FailBrush = new SolidColorBrush(Color.Parse("#B3565E"));
 
-    private readonly BridgeSession _session;
+    private readonly BridgeSupervisor _supervisor;
     private readonly AppSettings _settings;
     private readonly DispatcherTimer _ticker;
 
@@ -50,7 +50,10 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     private IBrush _deviceStatusBrush = IdleBrush;
 
     [ObservableProperty]
-    private bool _showConnect = true;
+    private bool _showStart = true;
+
+    [ObservableProperty]
+    private bool _showReconnect;
 
     [ObservableProperty]
     private bool _isBusy;
@@ -79,11 +82,11 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private IBrush _oscStatusBrush = IdleBrush;
 
-    public DashboardViewModel(BridgeSession session, AppSettings settings)
+    public DashboardViewModel(BridgeSupervisor supervisor, AppSettings settings)
     {
-        _session = session;
+        _supervisor = supervisor;
         _settings = settings;
-        _session.SnapshotChanged += OnSnapshotChanged;
+        _supervisor.SnapshotChanged += OnSnapshotChanged;
 
         _ticker = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Refresh());
         _ticker.Start();
@@ -94,11 +97,18 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _ticker.Stop();
-        _session.SnapshotChanged -= OnSnapshotChanged;
+        _supervisor.SnapshotChanged -= OnSnapshotChanged;
     }
 
     [RelayCommand]
-    private async Task ConnectAsync()
+    private void Start()
+    {
+        _supervisor.Start(_settings);
+        Refresh();
+    }
+
+    [RelayCommand]
+    private async Task StopAsync()
     {
         if (IsBusy)
         {
@@ -108,9 +118,7 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         IsBusy = true;
         try
         {
-            // Disconnect first so retry after a mid-session drop or failure always works.
-            await _session.DisconnectAsync();
-            await _session.ConnectAsync(_settings, CancellationToken.None);
+            await _supervisor.StopAsync();
         }
         finally
         {
@@ -120,30 +128,17 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task DisconnectAsync()
+    private void Reconnect()
     {
-        if (IsBusy)
-        {
-            return;
-        }
-
-        IsBusy = true;
-        try
-        {
-            await _session.DisconnectAsync();
-        }
-        finally
-        {
-            IsBusy = false;
-            Refresh();
-        }
+        _supervisor.RequestReconnectNow();
+        Refresh();
     }
 
     [RelayCommand]
     private void ToggleOsc()
     {
-        bool enable = _session.Snapshot.OscStatus == OscOutputStatus.Off;
-        if (_session.TrySetOscEnabled(enable, _settings, out _))
+        bool enable = _supervisor.Snapshot.Session.OscStatus == OscOutputStatus.Off;
+        if (_supervisor.TrySetOscEnabled(enable, _settings, out _))
         {
             _settings.OscEnabled = enable;
         }
@@ -151,26 +146,27 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
-    private void OnSnapshotChanged(object? sender, BridgeSnapshot snapshot) =>
+    private void OnSnapshotChanged(object? sender, SupervisorSnapshot snapshot) =>
         Dispatcher.UIThread.Post(Refresh);
 
     private void Refresh()
     {
-        var snapshot = _session.Snapshot;
+        var snapshot = _supervisor.Snapshot;
+        var session = snapshot.Session;
         var now = DateTimeOffset.UtcNow;
-        var status = snapshot.EffectiveStatus(now, _session.StaleThreshold);
+        var status = snapshot.EffectiveStatus(now, _supervisor.StaleThreshold);
 
-        StatusText = BridgeStatusCopy.Headline(snapshot, now, _session.StaleThreshold);
-        BpmText = status is BridgeStatus.Streaming or BridgeStatus.Stale && snapshot.Bpm is { } bpm
+        StatusText = BridgeStatusCopy.Headline(snapshot, now, _supervisor.StaleThreshold);
+        BpmText = status is BridgeStatus.Streaming or BridgeStatus.Stale && session.Bpm is { } bpm
             ? bpm.ToString()
             : "—";
         IsStreaming = status == BridgeStatus.Streaming;
 
-        LastUpdateText = snapshot.LastSampleAt is { } last
+        LastUpdateText = session.LastSampleAt is { } last
             ? $"updated {Math.Max(0, (int)(now - last).TotalSeconds)}s ago"
             : "";
 
-        DeviceLine = snapshot.SourceDescription ?? "No device";
+        DeviceLine = session.SourceDescription ?? "No device";
         DeviceStateText = status switch
         {
             BridgeStatus.NotConnected => "Not connected",
@@ -180,6 +176,7 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
             BridgeStatus.Streaming => "Streaming",
             BridgeStatus.Stale => "No recent data",
             BridgeStatus.Disconnected => "Disconnected",
+            BridgeStatus.Reconnecting => "Reconnecting",
             BridgeStatus.Failed => "Failed",
             _ => status.ToString(),
         };
@@ -187,30 +184,31 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         {
             BridgeStatus.Streaming => AccentBrush,
             BridgeStatus.Searching or BridgeStatus.Connecting or BridgeStatus.WaitingForData => WorkingBrush,
-            BridgeStatus.Stale => WarnBrush,
+            BridgeStatus.Stale or BridgeStatus.Reconnecting => WarnBrush,
             BridgeStatus.Failed or BridgeStatus.Disconnected => FailBrush,
             _ => IdleBrush,
         };
 
-        HasContactInfo = snapshot.SensorContact is SensorContactStatus.Contact or SensorContactStatus.NoContact;
-        ContactText = snapshot.SensorContact switch
+        HasContactInfo = session.SensorContact is SensorContactStatus.Contact or SensorContactStatus.NoContact;
+        ContactText = session.SensorContact switch
         {
             SensorContactStatus.Contact => "Skin contact: detected",
             SensorContactStatus.NoContact => "Skin contact: not detected",
             _ => "",
         };
 
-        ShowConnect = status is BridgeStatus.NotConnected or BridgeStatus.Failed or BridgeStatus.Disconnected;
-        ShowConnectHint = ShowConnect && _session.SupportsBle;
+        ShowStart = snapshot.RunState == BridgeRunState.Stopped;
+        ShowReconnect = status == BridgeStatus.Reconnecting;
+        ShowConnectHint = ShowStart && _supervisor.SupportsBle;
 
-        OscOn = snapshot.OscStatus != OscOutputStatus.Off;
-        OscStateText = snapshot.OscStatus switch
+        OscOn = session.OscStatus != OscOutputStatus.Off;
+        OscStateText = session.OscStatus switch
         {
             OscOutputStatus.On => "OSC on",
             OscOutputStatus.Error => "Sending failed — check the host and port.",
             _ => "OSC off",
         };
-        OscStatusBrush = snapshot.OscStatus switch
+        OscStatusBrush = session.OscStatus switch
         {
             OscOutputStatus.On => AccentBrush,
             OscOutputStatus.Error => WarnBrush,

@@ -72,16 +72,20 @@
           <TextBlock Classes="muted" Text="{Binding ContactText}" IsVisible="{Binding HasContactInfo}" />
           <TextBlock Classes="muted" TextWrapping="Wrap"
                      Text="{Binding ConnectHint}" IsVisible="{Binding ShowConnectHint}" />
-          <Button HorizontalAlignment="Right"
-                  Content="Connect"
-                  Command="{Binding ConnectCommand}"
-                  IsEnabled="{Binding !IsBusy}"
-                  IsVisible="{Binding ShowConnect}" />
-          <Button HorizontalAlignment="Right"
-                  Content="Disconnect"
-                  Command="{Binding DisconnectCommand}"
-                  IsEnabled="{Binding !IsBusy}"
-                  IsVisible="{Binding !ShowConnect}" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Reconnect"
+                    Command="{Binding ReconnectCommand}"
+                    IsEnabled="{Binding !IsBusy}"
+                    IsVisible="{Binding ShowReconnect}" />
+            <Button Content="Start"
+                    Command="{Binding StartCommand}"
+                    IsEnabled="{Binding !IsBusy}"
+                    IsVisible="{Binding ShowStart}" />
+            <Button Content="Stop"
+                    Command="{Binding StopCommand}"
+                    IsEnabled="{Binding !IsBusy}"
+                    IsVisible="{Binding !ShowStart}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

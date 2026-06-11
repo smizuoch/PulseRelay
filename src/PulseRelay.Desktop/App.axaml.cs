@@ -13,6 +13,7 @@ namespace PulseRelay.Desktop;
 
 public class App : Application
 {
+    private BridgeSupervisor? _supervisor;
     private BridgeSession? _session;
     private ILoggerFactory? _loggerFactory;
 
@@ -38,8 +39,10 @@ public class App : Application
             }
 
             _session = new BridgeSession(sourceFactory, _loggerFactory);
+            _supervisor = new BridgeSupervisor(
+                _session, logger: _loggerFactory.CreateLogger<BridgeSupervisor>());
 
-            var mainViewModel = new MainWindowViewModel(_session, settings);
+            var mainViewModel = new MainWindowViewModel(_supervisor, settings);
             desktop.MainWindow = new MainWindow
             {
                 DataContext = mainViewModel,
@@ -48,7 +51,7 @@ public class App : Application
 
             if (settings.AutoConnectOnLaunch)
             {
-                _ = mainViewModel.Dashboard.ConnectCommand.ExecuteAsync(null);
+                _supervisor.Start(settings);
             }
         }
 
@@ -57,6 +60,7 @@ public class App : Application
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
+        _supervisor?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _session?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _loggerFactory?.Dispose();
     }
