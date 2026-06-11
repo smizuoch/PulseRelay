@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\PulseRelay.App\PulseRelay.App.csproj" />
     <ProjectReference Include="..\..\src\PulseRelay.Core\PulseRelay.Core.csproj" />
     <ProjectReference Include="..\..\src\PulseRelay.Osc\PulseRelay.Osc.csproj" />
   </ItemGroup>

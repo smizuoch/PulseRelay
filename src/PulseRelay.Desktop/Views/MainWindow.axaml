@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PulseRelay.Desktop.ViewModels"
+        xmlns:views="using:PulseRelay.Desktop.Views"
+        x:Class="PulseRelay.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="PulseRelay"
+        Width="600" Height="480"
+        MinWidth="480" MinHeight="420"
+        Background="{StaticResource AppBackgroundBrush}"
+        WindowStartupLocation="CenterScreen">
+
+  <views:DashboardView DataContext="{Binding Dashboard}" />
+
+</Window>

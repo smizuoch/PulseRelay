@@ -34,6 +34,12 @@ public sealed class HeartRateOscPublisher : IDisposable
         _ = OscWriter.WriteMessage(address, 0);
     }
 
+    /// <summary>
+    /// Raised after every send attempt with its outcome. Fires on the thread that delivered
+    /// the sample (typically a BLE or timer callback thread), never the UI thread.
+    /// </summary>
+    public event EventHandler<OscSendResult>? SendCompleted;
+
     public void Attach(IHeartRateSource source)
     {
         if (_source is not null)
@@ -64,10 +70,12 @@ public sealed class HeartRateOscPublisher : IDisposable
         {
             _sender.Send(OscWriter.WriteMessage(_address, sample.Bpm));
             _logger.LogDebug("OSC sent {Address} = {Bpm}", _address, sample.Bpm);
+            SendCompleted?.Invoke(this, new OscSendResult(sample.Bpm, Error: null));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send OSC message to {Host}:{Port}", _sender.Host, _sender.Port);
+            SendCompleted?.Invoke(this, new OscSendResult(sample.Bpm, ex.Message));
         }
     }
 }

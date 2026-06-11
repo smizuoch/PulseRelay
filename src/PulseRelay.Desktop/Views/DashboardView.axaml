@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PulseRelay.Desktop.ViewModels"
+             x:Class="PulseRelay.Desktop.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.heart">
+      <Setter Property="Foreground" Value="{StaticResource PulseAccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.heart.live">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" IterationCount="INFINITE">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="1.0" />
+          </KeyFrame>
+          <KeyFrame Cue="50%">
+            <Setter Property="Opacity" Value="0.45" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1.0" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.cardtitle">
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Ellipse.dot">
+      <Setter Property="Width" Value="9" />
+      <Setter Property="Height" Value="9" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="*,Auto" Margin="24">
+
+    <!-- Hero: BPM + status -->
+    <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="14">
+        <TextBlock Classes="heart"
+                   Classes.live="{Binding IsStreaming}"
+                   Text="♥" FontSize="44" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding BpmText}" FontSize="72" FontWeight="Light" VerticalAlignment="Center" />
+        <TextBlock Text="bpm" Classes="muted" FontSize="18" VerticalAlignment="Bottom" Margin="0,0,0,14" />
+      </StackPanel>
+      <TextBlock HorizontalAlignment="Center" Text="{Binding StatusText}" FontSize="15" />
+      <TextBlock HorizontalAlignment="Center" Classes="muted" Text="{Binding LastUpdateText}" />
+    </StackPanel>
+
+    <!-- Device / Output cards -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,12,*">
+
+      <Border Grid.Column="0" Classes="card">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="cardtitle" Text="DEVICE" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Classes="dot" Fill="{Binding DeviceStatusBrush}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding DeviceStateText}" />
+          </StackPanel>
+          <TextBlock Classes="muted" Text="{Binding DeviceLine}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Classes="muted" Text="{Binding ContactText}" IsVisible="{Binding HasContactInfo}" />
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="{Binding ConnectHint}" IsVisible="{Binding ShowConnectHint}" />
+          <Button HorizontalAlignment="Right"
+                  Content="Connect"
+                  Command="{Binding ConnectCommand}"
+                  IsEnabled="{Binding !IsBusy}"
+                  IsVisible="{Binding ShowConnect}" />
+          <Button HorizontalAlignment="Right"
+                  Content="Disconnect"
+                  Command="{Binding DisconnectCommand}"
+                  IsEnabled="{Binding !IsBusy}"
+                  IsVisible="{Binding !ShowConnect}" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="2" Classes="card">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="cardtitle" Text="OUTPUT" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Classes="dot" Fill="{Binding OscStatusBrush}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding OscStateText}" TextWrapping="Wrap" />
+          </StackPanel>
+          <TextBlock Classes="muted" Text="{Binding OscTargetText}" />
+          <TextBlock Classes="muted" Text="{Binding OscAddressText}" TextTrimming="CharacterEllipsis" />
+          <Button HorizontalAlignment="Right"
+                  Content="Turn off"
+                  Command="{Binding ToggleOscCommand}"
+                  IsVisible="{Binding OscOn}" />
+          <Button HorizontalAlignment="Right"
+                  Content="Turn on"
+                  Command="{Binding ToggleOscCommand}"
+                  IsVisible="{Binding !OscOn}" />
+        </StackPanel>
+      </Border>
+
+    </Grid>
+
+  </Grid>
+
+</UserControl>

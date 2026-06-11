@@ -1,0 +1,23 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PulseRelay.Desktop.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Resources>
+    <!-- Soft pulse accent: warm rose, deliberately not medical red or neon. -->
+    <Color x:Key="SystemAccentColor">#E8637E</Color>
+    <SolidColorBrush x:Key="PulseAccentBrush" Color="#E8637E" />
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#16181D" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#1E2128" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#9BA1AB" />
+    <SolidColorBrush x:Key="StatusIdleBrush" Color="#6B7077" />
+    <SolidColorBrush x:Key="StatusWorkingBrush" Color="#A8AEB8" />
+    <SolidColorBrush x:Key="StatusWarnBrush" Color="#C9A227" />
+    <SolidColorBrush x:Key="StatusFailBrush" Color="#B3565E" />
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+
+</Application>
