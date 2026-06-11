@@ -20,11 +20,12 @@ and default values, never in product chrome or public type names.
 ```
 PulseRelay.Desktop (Avalonia, dual TFM)      UI only; BLE touched solely in
   └── PulseRelay.App (net10.0)               WindowsBleSourceFactory (#if WINDOWS_BLE)
-        ├── BridgeSession                    owns IHeartRateSource + HeartRateOscPublisher,
-        │                                    condenses events into immutable BridgeSnapshot
+        ├── BridgeSupervisor                 user intent + reconnect backoff + stale watchdog,
+        │     └── BridgeSession              owns IHeartRateSource + HeartRateOscPublisher,
+        │                                    condenses events into immutable snapshots
         ├── SettingsStore / AppSettings      JSON at <ApplicationData>/PulseRelay/settings.json
         ├── RingBufferLogSink                ILoggerProvider feeding the Diagnostics view
-        └── BridgeStatusCopy                 shared user-facing wording
+        └── BridgeStatusCopy + Localization  shared user-facing wording (resource-backed)
 ```
 
 `SnapshotChanged` fires on source/timer threads; ViewModels marshal via
@@ -46,6 +47,38 @@ PulseRelay.Desktop (Avalonia, dual TFM)      UI only; BLE touched solely in
 Staleness is evaluated by a 1-second UI ticker via `BridgeSnapshot.EffectiveStatus`; it
 never mutates source state. OSC has its own status (`Off` / `On` / `Error`) driven by
 `HeartRateOscPublisher.SendCompleted`.
+
+## Reconnect state machine (BridgeSupervisor)
+
+User intent drives everything: **Start** declares "keep this running", **Stop** declares
+"stop and stay stopped".
+
+```
+Stopped ──Start──> Running ──drop/initial failure/30s silence──> Reconnecting
+   ^                  ^                                              │
+   │                  └──────────── attempt succeeds ────────────────┘
+   └─────────────────────────────── Stop (from anywhere; cancels pending retry)
+```
+
+- Backoff 1 s → 3 s → 10 s → 30 s, last tier repeats indefinitely; resets on reaching
+  Streaming or on manual **Reconnect** (which also skips the pending wait).
+- Every attempt requests a *fresh* source from the factory; BLE addresses (RPAs) are
+  never reused or persisted.
+- Display-stale at 10 s ("No data for Ns…"), forced reconnect at 30 s — both only after
+  the first sample, because the Charge 6 first notification can take ~19 s.
+- `BridgeStatus.Reconnecting` is overlaid only while the session has nothing better to
+  report; an in-flight retry still shows Searching/Connecting progress.
+
+## Localization
+
+- All user-visible copy lives in `src/PulseRelay.App/Localization/Strings.resx`
+  (neutral = English fallback) and `Strings.ja.resx`, accessed by string key through
+  `LocalizationManager`. Key parity, required keys, and placeholder parity are unit-tested.
+- The desktop binds labels with `{loc:Loc Key}` (a bindable indexer singleton); changing
+  the Language setting (System / English / 日本語, default System, persisted) re-localizes
+  the UI **live, without restart**.
+- Log text is exempt by policy: every `ILogger` message stays English with ASCII
+  punctuation, so Diagnostics log entries are always grep-able and bug-report-friendly.
 
 ## Error copy rules
 
