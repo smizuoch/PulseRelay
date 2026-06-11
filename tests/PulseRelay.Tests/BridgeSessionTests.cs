@@ -88,6 +88,7 @@ public class BridgeSessionTests
         Assert.False(connected);
         Assert.Equal(BridgeStatus.Failed, session.Snapshot.Status);
         Assert.Contains("platform", session.Snapshot.LastError, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(BridgeFailureKind.PlatformUnsupported, session.Snapshot.FailureKind);
     }
 
     [Fact]
@@ -124,6 +125,7 @@ public class BridgeSessionTests
 
         Assert.False(connected);
         Assert.Equal(BridgeStatus.Failed, session.Snapshot.Status);
+        Assert.Equal(BridgeFailureKind.OscConfig, session.Snapshot.FailureKind);
         Assert.Equal(OscOutputStatus.Error, session.Snapshot.OscStatus);
         Assert.NotNull(session.Snapshot.OscError);
     }

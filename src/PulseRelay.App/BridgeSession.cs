@@ -81,7 +81,14 @@ public sealed class BridgeSession : IAsyncDisposable
         catch (Exception ex) when (ex is PlatformNotSupportedException or ArgumentException)
         {
             _logger.LogError(ex, "Cannot create heart-rate source");
-            Update(_ => BridgeSnapshot.Initial with { Status = BridgeStatus.Failed, LastError = ex.Message });
+            Update(_ => BridgeSnapshot.Initial with
+            {
+                Status = BridgeStatus.Failed,
+                LastError = ex.Message,
+                FailureKind = ex is PlatformNotSupportedException
+                    ? BridgeFailureKind.PlatformUnsupported
+                    : BridgeFailureKind.Unknown,
+            });
             return false;
         }
 
@@ -106,6 +113,7 @@ public sealed class BridgeSession : IAsyncDisposable
             {
                 Status = BridgeStatus.Failed,
                 LastError = oscError,
+                FailureKind = BridgeFailureKind.OscConfig,
                 OscStatus = OscOutputStatus.Error,
                 OscError = oscError,
             });
@@ -135,8 +143,11 @@ public sealed class BridgeSession : IAsyncDisposable
         {
             _logger.LogError(ex, "Connect failed");
             string message = ex.Message;
+            // BleHeartRateSource throws TimeoutException when no device advertises within
+            // the scan window; a radio that is off typically surfaces the same way.
+            var kind = ex is TimeoutException ? BridgeFailureKind.DeviceNotFound : BridgeFailureKind.Unknown;
             await CleanupAsync();
-            Update(s => s with { Status = BridgeStatus.Failed, LastError = message });
+            Update(s => s with { Status = BridgeStatus.Failed, LastError = message, FailureKind = kind });
             return false;
         }
     }
