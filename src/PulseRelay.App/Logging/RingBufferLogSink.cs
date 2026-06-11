@@ -96,7 +96,8 @@ public sealed class RingBufferLogSink : ILoggerProvider
             string message = formatter(state, exception);
             if (exception is not null)
             {
-                message = $"{message} — {exception.GetType().Name}: {exception.Message}";
+                // Log text stays English with ASCII punctuation (see repo log policy).
+                message = $"{message} - {exception.GetType().Name}: {exception.Message}";
             }
 
             _sink.Add(new LogEntry(DateTimeOffset.Now, logLevel, _category, message));

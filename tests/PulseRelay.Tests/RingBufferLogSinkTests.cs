@@ -35,6 +35,18 @@ public class RingBufferLogSinkTests
     }
 
     [Fact]
+    public void Exception_folding_stays_ascii()
+    {
+        using var sink = new RingBufferLogSink();
+        var logger = sink.CreateLogger("cat");
+
+        logger.LogWarning(new InvalidOperationException("boom"), "send failed");
+
+        var entry = Assert.Single(sink.GetSnapshot());
+        Assert.All(entry.Message, c => Assert.True(char.IsAscii(c), $"Non-ASCII char '{c}' in: {entry.Message}"));
+    }
+
+    [Fact]
     public void Drops_oldest_entries_beyond_capacity()
     {
         using var sink = new RingBufferLogSink(capacity: 3);
