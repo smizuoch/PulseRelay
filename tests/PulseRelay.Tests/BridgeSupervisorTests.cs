@@ -122,6 +122,7 @@ public class BridgeSupervisorTests
     [Fact]
     public async Task Streaming_shows_stale_after_display_threshold_without_reconnecting()
     {
+        using var culture = new CultureScope("en");
         await using var h = new Harness();
         await h.StartAndStreamAsync();
 
@@ -215,6 +216,7 @@ public class BridgeSupervisorTests
     [Fact]
     public async Task Initial_connect_failure_retries_with_not_found_copy()
     {
+        using var culture = new CultureScope("en");
         await using var h = new Harness();
         h.Factory.StartFailureForAttempt = attempt => attempt == 0 ? new TimeoutException("scan timeout") : null;
         h.Supervisor.Start(h.Settings);

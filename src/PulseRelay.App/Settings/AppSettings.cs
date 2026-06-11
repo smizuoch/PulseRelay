@@ -17,6 +17,14 @@ public enum AppTheme
     Light,
 }
 
+public enum AppLanguage
+{
+    /// <summary>Follow the operating system's UI language.</summary>
+    System,
+    English,
+    Japanese,
+}
+
 /// <summary>
 /// Persisted user settings. Deliberately contains no BLE address: peripheral addresses are
 /// resolvable private addresses (RPA) and must never be stored as stable identities — only
@@ -40,6 +48,8 @@ public sealed class AppSettings
     public string OscAddress { get; set; } = HeartRateOscPublisher.DefaultAddress;
 
     public AppTheme Theme { get; set; } = AppTheme.Dark;
+
+    public AppLanguage Language { get; set; } = AppLanguage.System;
 
     public bool AutoConnectOnLaunch { get; set; }
 

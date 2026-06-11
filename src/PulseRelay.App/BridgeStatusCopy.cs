@@ -1,9 +1,12 @@
+using PulseRelay.App.Localization;
+
 namespace PulseRelay.App;
 
 /// <summary>
-/// User-facing one-line status copy. Lives here (not in the UI project) so the dashboard,
-/// wizard, and tray tooltip share identical wording and it stays unit-testable.
-/// Plain language only — GATT/CCCD/RPA terms belong in Diagnostics.
+/// User-facing one-line status copy, backed by the localization resources. Lives here (not
+/// in the UI project) so the dashboard, future views, and tray tooltip share identical
+/// wording and it stays unit-testable. Plain language only — GATT/CCCD/RPA terms belong in
+/// Diagnostics, and log text never comes from here.
 /// </summary>
 public static class BridgeStatusCopy
 {
@@ -12,9 +15,8 @@ public static class BridgeStatusCopy
     {
         if (snapshot.EffectiveStatus(nowUtc, staleThreshold) == BridgeStatus.Reconnecting)
         {
-            return snapshot.HasStreamedThisRun
-                ? "Device disconnected — trying again…"
-                : "Couldn't find your device — trying again…";
+            return LocalizationManager.GetString(
+                snapshot.HasStreamedThisRun ? "Status_Reconnecting" : "Status_ReconnectingInitial");
         }
 
         return Headline(snapshot.Session, nowUtc, staleThreshold);
@@ -25,30 +27,41 @@ public static class BridgeStatusCopy
         var status = snapshot.EffectiveStatus(nowUtc, staleThreshold);
         return status switch
         {
-            BridgeStatus.NotConnected => "Not connected",
-            BridgeStatus.Searching => "Looking for your device…",
-            BridgeStatus.Connecting => "Connecting…",
-            BridgeStatus.WaitingForData => "Connected — waiting for the first reading…",
-            BridgeStatus.Streaming => "Receiving heart rate",
+            BridgeStatus.NotConnected => LocalizationManager.GetString("Status_NotConnected"),
+            BridgeStatus.Searching => LocalizationManager.GetString("Status_Searching"),
+            BridgeStatus.Connecting => LocalizationManager.GetString("Status_Connecting"),
+            BridgeStatus.WaitingForData => LocalizationManager.GetString("Status_WaitingForData"),
+            BridgeStatus.Streaming => LocalizationManager.GetString("Status_Streaming"),
             BridgeStatus.Stale => StaleHeadline(snapshot, nowUtc),
-            BridgeStatus.Disconnected => "Device disconnected",
-            BridgeStatus.Reconnecting => "Device disconnected — trying again…",
+            BridgeStatus.Disconnected => LocalizationManager.GetString("Status_Disconnected"),
+            BridgeStatus.Reconnecting => LocalizationManager.GetString("Status_Reconnecting"),
             BridgeStatus.Failed => FailedHeadline(snapshot),
             _ => status.ToString(),
         };
     }
 
+    /// <summary>Short state label for the device card.</summary>
+    public static string DeviceState(BridgeStatus status) => status switch
+    {
+        BridgeStatus.NotConnected => LocalizationManager.GetString("Device_State_NotConnected"),
+        BridgeStatus.Searching => LocalizationManager.GetString("Device_State_Searching"),
+        BridgeStatus.Connecting => LocalizationManager.GetString("Device_State_Connecting"),
+        BridgeStatus.WaitingForData => LocalizationManager.GetString("Device_State_WaitingForData"),
+        BridgeStatus.Streaming => LocalizationManager.GetString("Device_State_Streaming"),
+        BridgeStatus.Stale => LocalizationManager.GetString("Device_State_Stale"),
+        BridgeStatus.Disconnected => LocalizationManager.GetString("Device_State_Disconnected"),
+        BridgeStatus.Reconnecting => LocalizationManager.GetString("Device_State_Reconnecting"),
+        BridgeStatus.Failed => LocalizationManager.GetString("Device_State_Failed"),
+        _ => status.ToString(),
+    };
+
     private static string FailedHeadline(BridgeSnapshot snapshot) => snapshot.FailureKind switch
     {
-        BridgeFailureKind.DeviceNotFound =>
-            "Couldn't find a heart-rate device. Check that it's sharing its heart rate and is near this computer.",
-        BridgeFailureKind.BluetoothUnavailable =>
-            "Bluetooth isn't available. Turn it on in system settings, then try again.",
-        BridgeFailureKind.PlatformUnsupported =>
-            "Bluetooth LE devices aren't supported on this platform yet.",
-        BridgeFailureKind.OscConfig =>
-            "OSC output couldn't start — check the host, port, and address in settings.",
-        _ => snapshot.LastError ?? "Connection failed",
+        BridgeFailureKind.DeviceNotFound => LocalizationManager.GetString("Error_DeviceNotFound"),
+        BridgeFailureKind.BluetoothUnavailable => LocalizationManager.GetString("Error_BluetoothUnavailable"),
+        BridgeFailureKind.PlatformUnsupported => LocalizationManager.GetString("Error_PlatformUnsupported"),
+        BridgeFailureKind.OscConfig => LocalizationManager.GetString("Error_OscConfig"),
+        _ => snapshot.LastError ?? LocalizationManager.GetString("Status_Failed"),
     };
 
     private static string StaleHeadline(BridgeSnapshot snapshot, DateTimeOffset nowUtc)
@@ -56,6 +69,6 @@ public static class BridgeStatusCopy
         int seconds = snapshot.LastSampleAt is { } last
             ? (int)(nowUtc - last).TotalSeconds
             : 0;
-        return $"No data for {seconds}s — is the device still sharing?";
+        return LocalizationManager.Format("Status_Stale", seconds);
     }
 }

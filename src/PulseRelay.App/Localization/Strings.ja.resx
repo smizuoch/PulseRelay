@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Japanese UI copy. Keys must mirror Strings.resx exactly (guarded by LocalizationTests). -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Status_NotConnected" xml:space="preserve">
+    <value>未接続</value>
+  </data>
+  <data name="Status_Searching" xml:space="preserve">
+    <value>デバイスを探しています…</value>
+  </data>
+  <data name="Status_Connecting" xml:space="preserve">
+    <value>接続中…</value>
+  </data>
+  <data name="Status_WaitingForData" xml:space="preserve">
+    <value>接続済み — 最初の測定値を待っています…</value>
+  </data>
+  <data name="Status_Streaming" xml:space="preserve">
+    <value>心拍数を受信中</value>
+  </data>
+  <data name="Status_Stale" xml:space="preserve">
+    <value>{0}秒間データがありません — デバイスは共有を続けていますか？</value>
+  </data>
+  <data name="Status_Disconnected" xml:space="preserve">
+    <value>デバイスが切断されました</value>
+  </data>
+  <data name="Status_Reconnecting" xml:space="preserve">
+    <value>デバイスが切断されました — 再接続しています…</value>
+  </data>
+  <data name="Status_ReconnectingInitial" xml:space="preserve">
+    <value>デバイスが見つかりません — 再試行しています…</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>接続に失敗しました</value>
+  </data>
+
+  <data name="Error_DeviceNotFound" xml:space="preserve">
+    <value>心拍数デバイスが見つかりませんでした。デバイスが心拍数を共有していて、このパソコンの近くにあるか確認してください。</value>
+  </data>
+  <data name="Error_BluetoothUnavailable" xml:space="preserve">
+    <value>Bluetooth が利用できません。システム設定でオンにしてから、もう一度お試しください。</value>
+  </data>
+  <data name="Error_PlatformUnsupported" xml:space="preserve">
+    <value>このプラットフォームでは Bluetooth LE デバイスはまだサポートされていません。</value>
+  </data>
+  <data name="Error_OscConfig" xml:space="preserve">
+    <value>OSC 出力を開始できませんでした — 設定のホスト・ポート・アドレスを確認してください。</value>
+  </data>
+  <data name="Error_DeviceDisconnected" xml:space="preserve">
+    <value>デバイスとの接続が切れました。もう一度共有を開始してから、再接続してください。</value>
+  </data>
+
+  <data name="Device_CardTitle" xml:space="preserve">
+    <value>デバイス</value>
+  </data>
+  <data name="Device_NoDevice" xml:space="preserve">
+    <value>デバイスなし</value>
+  </data>
+  <data name="Device_State_NotConnected" xml:space="preserve">
+    <value>未接続</value>
+  </data>
+  <data name="Device_State_Searching" xml:space="preserve">
+    <value>検索中</value>
+  </data>
+  <data name="Device_State_Connecting" xml:space="preserve">
+    <value>接続中</value>
+  </data>
+  <data name="Device_State_WaitingForData" xml:space="preserve">
+    <value>データ待ち</value>
+  </data>
+  <data name="Device_State_Streaming" xml:space="preserve">
+    <value>受信中</value>
+  </data>
+  <data name="Device_State_Stale" xml:space="preserve">
+    <value>最近のデータなし</value>
+  </data>
+  <data name="Device_State_Disconnected" xml:space="preserve">
+    <value>切断</value>
+  </data>
+  <data name="Device_State_Reconnecting" xml:space="preserve">
+    <value>再接続中</value>
+  </data>
+  <data name="Device_State_Failed" xml:space="preserve">
+    <value>失敗</value>
+  </data>
+  <data name="Device_ContactDetected" xml:space="preserve">
+    <value>皮膚接触: あり</value>
+  </data>
+  <data name="Device_ContactNotDetected" xml:space="preserve">
+    <value>皮膚接触: なし</value>
+  </data>
+  <data name="Device_ConnectHint" xml:space="preserve">
+    <value>先にデバイスで心拍数の共有を開始してください。</value>
+  </data>
+
+  <data name="Output_CardTitle" xml:space="preserve">
+    <value>出力</value>
+  </data>
+  <data name="Output_OscOn" xml:space="preserve">
+    <value>OSC オン</value>
+  </data>
+  <data name="Output_OscOff" xml:space="preserve">
+    <value>OSC オフ</value>
+  </data>
+  <data name="Output_OscError" xml:space="preserve">
+    <value>送信に失敗しました — ホストとポートを確認してください。</value>
+  </data>
+  <data name="Output_TurnOn" xml:space="preserve">
+    <value>オンにする</value>
+  </data>
+  <data name="Output_TurnOff" xml:space="preserve">
+    <value>オフにする</value>
+  </data>
+
+  <data name="Action_Start" xml:space="preserve">
+    <value>開始</value>
+  </data>
+  <data name="Action_Stop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Action_Reconnect" xml:space="preserve">
+    <value>再接続</value>
+  </data>
+  <data name="Action_Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Action_Diagnostics" xml:space="preserve">
+    <value>診断</value>
+  </data>
+
+  <data name="Osc_TestSent" xml:space="preserve">
+    <value>テスト値を送信しました。</value>
+  </data>
+  <data name="Osc_TestFailed" xml:space="preserve">
+    <value>{0} に送信できませんでした — アドレス設定を確認してください。</value>
+  </data>
+
+  <data name="Dashboard_BpmUnit" xml:space="preserve">
+    <value>bpm</value>
+  </data>
+  <data name="Dashboard_UpdatedAgo" xml:space="preserve">
+    <value>{0}秒前に更新</value>
+  </data>
+
+  <data name="Lang_Label" xml:space="preserve">
+    <value>言語</value>
+  </data>
+  <data name="Lang_System" xml:space="preserve">
+    <value>システム</value>
+  </data>
+  <data name="Lang_English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Lang_Japanese" xml:space="preserve">
+    <value>日本語</value>
+  </data>
+
+  <data name="Guide_Share_Title" xml:space="preserve">
+    <value>心拍数を共有するには？</value>
+  </data>
+  <data name="Guide_Share_Intro" xml:space="preserve">
+    <value>多くの心拍数デバイスでは、共有（ブロードキャスト）をデバイス側で開始する必要があります。PulseRelay が代わりに開始することはできません — 毎回デバイス側で操作してください。</value>
+  </data>
+  <data name="Guide_Share_Charge6_Title" xml:space="preserve">
+    <value>Fitbit Charge 6</value>
+  </data>
+  <data name="Guide_Share_Charge6_Steps" xml:space="preserve">
+    <value>1. トラッカーで「HR on equipment」（装置で心拍数の共有）タイルを開きます。
+2. 「共有」をタップし、「開始」をタップします。
+3. トラッカーをその画面のままにしてください。</value>
+  </data>
+  <data name="Guide_Share_Charge6_Note" xml:space="preserve">
+    <value>注意: Charge 6 が同時に共有できるのは 1 つのアプリ・機器だけです。他の接続（CLI プローブを含む）を先に終了してください。</value>
+  </data>
+</root>

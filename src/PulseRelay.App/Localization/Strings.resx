@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Neutral culture = English fallback. User-visible UI copy only; log text never comes from here. -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Status_NotConnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="Status_Searching" xml:space="preserve">
+    <value>Looking for your device…</value>
+  </data>
+  <data name="Status_Connecting" xml:space="preserve">
+    <value>Connecting…</value>
+  </data>
+  <data name="Status_WaitingForData" xml:space="preserve">
+    <value>Connected — waiting for the first reading…</value>
+  </data>
+  <data name="Status_Streaming" xml:space="preserve">
+    <value>Receiving heart rate</value>
+  </data>
+  <data name="Status_Stale" xml:space="preserve">
+    <value>No data for {0}s — is the device still sharing?</value>
+  </data>
+  <data name="Status_Disconnected" xml:space="preserve">
+    <value>Device disconnected</value>
+  </data>
+  <data name="Status_Reconnecting" xml:space="preserve">
+    <value>Device disconnected — trying again…</value>
+  </data>
+  <data name="Status_ReconnectingInitial" xml:space="preserve">
+    <value>Couldn't find your device — trying again…</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+
+  <data name="Error_DeviceNotFound" xml:space="preserve">
+    <value>Couldn't find a heart-rate device. Check that it's sharing its heart rate and is near this computer.</value>
+  </data>
+  <data name="Error_BluetoothUnavailable" xml:space="preserve">
+    <value>Bluetooth isn't available. Turn it on in system settings, then try again.</value>
+  </data>
+  <data name="Error_PlatformUnsupported" xml:space="preserve">
+    <value>Bluetooth LE devices aren't supported on this platform yet.</value>
+  </data>
+  <data name="Error_OscConfig" xml:space="preserve">
+    <value>OSC output couldn't start — check the host, port, and address in settings.</value>
+  </data>
+  <data name="Error_DeviceDisconnected" xml:space="preserve">
+    <value>The device disconnected. Start sharing again, then reconnect.</value>
+  </data>
+
+  <data name="Device_CardTitle" xml:space="preserve">
+    <value>DEVICE</value>
+  </data>
+  <data name="Device_NoDevice" xml:space="preserve">
+    <value>No device</value>
+  </data>
+  <data name="Device_State_NotConnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="Device_State_Searching" xml:space="preserve">
+    <value>Searching</value>
+  </data>
+  <data name="Device_State_Connecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="Device_State_WaitingForData" xml:space="preserve">
+    <value>Waiting for data</value>
+  </data>
+  <data name="Device_State_Streaming" xml:space="preserve">
+    <value>Streaming</value>
+  </data>
+  <data name="Device_State_Stale" xml:space="preserve">
+    <value>No recent data</value>
+  </data>
+  <data name="Device_State_Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Device_State_Reconnecting" xml:space="preserve">
+    <value>Reconnecting</value>
+  </data>
+  <data name="Device_State_Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Device_ContactDetected" xml:space="preserve">
+    <value>Skin contact: detected</value>
+  </data>
+  <data name="Device_ContactNotDetected" xml:space="preserve">
+    <value>Skin contact: not detected</value>
+  </data>
+  <data name="Device_ConnectHint" xml:space="preserve">
+    <value>Make sure your device is sharing its heart rate first.</value>
+  </data>
+
+  <data name="Output_CardTitle" xml:space="preserve">
+    <value>OUTPUT</value>
+  </data>
+  <data name="Output_OscOn" xml:space="preserve">
+    <value>OSC on</value>
+  </data>
+  <data name="Output_OscOff" xml:space="preserve">
+    <value>OSC off</value>
+  </data>
+  <data name="Output_OscError" xml:space="preserve">
+    <value>Sending failed — check the host and port.</value>
+  </data>
+  <data name="Output_TurnOn" xml:space="preserve">
+    <value>Turn on</value>
+  </data>
+  <data name="Output_TurnOff" xml:space="preserve">
+    <value>Turn off</value>
+  </data>
+
+  <data name="Action_Start" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Action_Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Action_Reconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="Action_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Action_Diagnostics" xml:space="preserve">
+    <value>Diagnostics</value>
+  </data>
+
+  <data name="Osc_TestSent" xml:space="preserve">
+    <value>Test value sent.</value>
+  </data>
+  <data name="Osc_TestFailed" xml:space="preserve">
+    <value>Couldn't send to {0} — check the address settings.</value>
+  </data>
+
+  <data name="Dashboard_BpmUnit" xml:space="preserve">
+    <value>bpm</value>
+  </data>
+  <data name="Dashboard_UpdatedAgo" xml:space="preserve">
+    <value>updated {0}s ago</value>
+  </data>
+
+  <data name="Lang_Label" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Lang_System" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="Lang_English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Lang_Japanese" xml:space="preserve">
+    <value>日本語</value>
+  </data>
+
+  <data name="Guide_Share_Title" xml:space="preserve">
+    <value>How do I share my heart rate?</value>
+  </data>
+  <data name="Guide_Share_Intro" xml:space="preserve">
+    <value>Most heart-rate devices must be told to broadcast. PulseRelay can't switch this on for you — you do it on the device each session.</value>
+  </data>
+  <data name="Guide_Share_Charge6_Title" xml:space="preserve">
+    <value>Fitbit Charge 6</value>
+  </data>
+  <data name="Guide_Share_Charge6_Steps" xml:space="preserve">
+    <value>1. On the tracker, open the "HR on equipment" tile.
+2. Tap "Share", then "Start".
+3. Keep the tracker on that screen.</value>
+  </data>
+  <data name="Guide_Share_Charge6_Note" xml:space="preserve">
+    <value>Note: the Charge 6 shares with one app or equipment at a time. Close other connections (including the CLI probe) first.</value>
+  </data>
+</root>

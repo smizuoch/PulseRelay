@@ -166,6 +166,7 @@ public class BridgeSessionTests
     [Fact]
     public void Stale_headline_reports_seconds()
     {
+        using var culture = new CultureScope("en");
         var now = DateTimeOffset.UtcNow;
         var snapshot = BridgeSnapshot.Initial with
         {
