@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:PulseRelay.Desktop.ViewModels"
+             xmlns:loc="using:PulseRelay.Desktop.Localization"
              x:Class="PulseRelay.Desktop.Views.DashboardView"
              x:DataType="vm:DashboardViewModel">
 
@@ -43,7 +44,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="*,Auto" Margin="24">
+  <Grid RowDefinitions="*,Auto,Auto" Margin="24">
 
     <!-- Hero: BPM + status -->
     <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
@@ -52,7 +53,8 @@
                    Classes.live="{Binding IsStreaming}"
                    Text="♥" FontSize="44" VerticalAlignment="Center" />
         <TextBlock Text="{Binding BpmText}" FontSize="72" FontWeight="Light" VerticalAlignment="Center" />
-        <TextBlock Text="bpm" Classes="muted" FontSize="18" VerticalAlignment="Bottom" Margin="0,0,0,14" />
+        <TextBlock Text="{loc:Loc Dashboard_BpmUnit}" Classes="muted" FontSize="18"
+                   VerticalAlignment="Bottom" Margin="0,0,0,14" />
       </StackPanel>
       <TextBlock HorizontalAlignment="Center" Text="{Binding StatusText}" FontSize="15" />
       <TextBlock HorizontalAlignment="Center" Classes="muted" Text="{Binding LastUpdateText}" />
@@ -63,7 +65,7 @@
 
       <Border Grid.Column="0" Classes="card">
         <StackPanel Spacing="8">
-          <TextBlock Classes="cardtitle" Text="DEVICE" />
+          <TextBlock Classes="cardtitle" Text="{loc:Loc Device_CardTitle}" />
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Ellipse Classes="dot" Fill="{Binding DeviceStatusBrush}" VerticalAlignment="Center" />
             <TextBlock Text="{Binding DeviceStateText}" />
@@ -71,17 +73,28 @@
           <TextBlock Classes="muted" Text="{Binding DeviceLine}" TextTrimming="CharacterEllipsis" />
           <TextBlock Classes="muted" Text="{Binding ContactText}" IsVisible="{Binding HasContactInfo}" />
           <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="{Binding ConnectHint}" IsVisible="{Binding ShowConnectHint}" />
+                     Text="{loc:Loc Device_ConnectHint}" IsVisible="{Binding ShowConnectHint}" />
+          <Expander IsVisible="{Binding ShowConnectHint}">
+            <Expander.Header>
+              <TextBlock Classes="muted" Text="{loc:Loc Guide_Share_Title}" />
+            </Expander.Header>
+            <StackPanel Spacing="6" Margin="0,4,0,0">
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Guide_Share_Intro}" />
+              <TextBlock FontWeight="SemiBold" FontSize="12" Text="{loc:Loc Guide_Share_Charge6_Title}" />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Guide_Share_Charge6_Steps}" />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Guide_Share_Charge6_Note}" />
+            </StackPanel>
+          </Expander>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="Reconnect"
+            <Button Content="{loc:Loc Action_Reconnect}"
                     Command="{Binding ReconnectCommand}"
                     IsEnabled="{Binding !IsBusy}"
                     IsVisible="{Binding ShowReconnect}" />
-            <Button Content="Start"
+            <Button Content="{loc:Loc Action_Start}"
                     Command="{Binding StartCommand}"
                     IsEnabled="{Binding !IsBusy}"
                     IsVisible="{Binding ShowStart}" />
-            <Button Content="Stop"
+            <Button Content="{loc:Loc Action_Stop}"
                     Command="{Binding StopCommand}"
                     IsEnabled="{Binding !IsBusy}"
                     IsVisible="{Binding !ShowStart}" />
@@ -89,9 +102,9 @@
         </StackPanel>
       </Border>
 
-      <Border Grid.Column="2" Classes="card">
+      <Border Grid.Column="2" Classes="card" VerticalAlignment="Top">
         <StackPanel Spacing="8">
-          <TextBlock Classes="cardtitle" Text="OUTPUT" />
+          <TextBlock Classes="cardtitle" Text="{loc:Loc Output_CardTitle}" />
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Ellipse Classes="dot" Fill="{Binding OscStatusBrush}" VerticalAlignment="Center" />
             <TextBlock Text="{Binding OscStateText}" TextWrapping="Wrap" />
@@ -99,17 +112,32 @@
           <TextBlock Classes="muted" Text="{Binding OscTargetText}" />
           <TextBlock Classes="muted" Text="{Binding OscAddressText}" TextTrimming="CharacterEllipsis" />
           <Button HorizontalAlignment="Right"
-                  Content="Turn off"
+                  Content="{loc:Loc Output_TurnOff}"
                   Command="{Binding ToggleOscCommand}"
                   IsVisible="{Binding OscOn}" />
           <Button HorizontalAlignment="Right"
-                  Content="Turn on"
+                  Content="{loc:Loc Output_TurnOn}"
                   Command="{Binding ToggleOscCommand}"
                   IsVisible="{Binding !OscOn}" />
         </StackPanel>
       </Border>
 
     </Grid>
+
+    <!-- Footer: language picker -->
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
+      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{loc:Loc Lang_Label}" />
+      <ComboBox MinWidth="120"
+                ItemsSource="{Binding LanguageOptions}"
+                SelectedItem="{Binding SelectedLanguage}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:LanguageOption">
+            <TextBlock Text="{Binding Label}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+    </StackPanel>
 
   </Grid>
 

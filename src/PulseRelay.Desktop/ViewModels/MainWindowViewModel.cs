@@ -6,9 +6,9 @@ namespace PulseRelay.Desktop.ViewModels;
 
 public sealed class MainWindowViewModel : ObservableObject
 {
-    public MainWindowViewModel(BridgeSupervisor supervisor, AppSettings settings)
+    public MainWindowViewModel(BridgeSupervisor supervisor, AppSettings settings, SettingsStore settingsStore)
     {
-        Dashboard = new DashboardViewModel(supervisor, settings);
+        Dashboard = new DashboardViewModel(supervisor, settings, settingsStore);
     }
 
     public DashboardViewModel Dashboard { get; }

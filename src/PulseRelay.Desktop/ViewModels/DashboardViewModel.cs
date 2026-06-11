@@ -3,15 +3,33 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PulseRelay.App;
+using PulseRelay.App.Localization;
 using PulseRelay.App.Settings;
 using PulseRelay.Core.HeartRate;
 
 namespace PulseRelay.Desktop.ViewModels;
 
+/// <summary>One entry of the language picker; the label re-localizes itself.</summary>
+public sealed class LanguageOption : ObservableObject
+{
+    public LanguageOption(AppLanguage value) => Value = value;
+
+    public AppLanguage Value { get; }
+
+    public string Label => Value switch
+    {
+        AppLanguage.English => LocalizationManager.GetString("Lang_English"),
+        AppLanguage.Japanese => LocalizationManager.GetString("Lang_Japanese"),
+        _ => LocalizationManager.GetString("Lang_System"),
+    };
+
+    public void RefreshLabel() => OnPropertyChanged(nameof(Label));
+}
+
 /// <summary>
 /// Main-screen view model. Mirrors the latest <see cref="SupervisorSnapshot"/> onto bindable
-/// properties; a 1-second ticker refreshes the freshness line and stale detection without
-/// touching the supervisor.
+/// properties; a 1-second ticker refreshes the freshness line and stale detection. All
+/// user-visible strings come from the localization resources and recompute on language change.
 /// </summary>
 public sealed partial class DashboardViewModel : ObservableObject, IDisposable
 {
@@ -23,22 +41,23 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
 
     private readonly BridgeSupervisor _supervisor;
     private readonly AppSettings _settings;
+    private readonly SettingsStore _settingsStore;
     private readonly DispatcherTimer _ticker;
 
     [ObservableProperty]
     private string _bpmText = "—";
 
     [ObservableProperty]
-    private string _statusText = "Not connected";
+    private string _statusText = "";
 
     [ObservableProperty]
     private string _lastUpdateText = "";
 
     [ObservableProperty]
-    private string _deviceLine = "No device";
+    private string _deviceLine = "";
 
     [ObservableProperty]
-    private string _deviceStateText = "Not connected";
+    private string _deviceStateText = "";
 
     [ObservableProperty]
     private string _contactText = "";
@@ -62,16 +81,13 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     private bool _isStreaming;
 
     [ObservableProperty]
-    private string _connectHint = "Make sure your device is sharing its heart rate first.";
-
-    [ObservableProperty]
     private bool _showConnectHint = true;
 
     [ObservableProperty]
     private bool _oscOn;
 
     [ObservableProperty]
-    private string _oscStateText = "OSC off";
+    private string _oscStateText = "";
 
     [ObservableProperty]
     private string _oscTargetText = "";
@@ -82,11 +98,24 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private IBrush _oscStatusBrush = IdleBrush;
 
-    public DashboardViewModel(BridgeSupervisor supervisor, AppSettings settings)
+    [ObservableProperty]
+    private LanguageOption _selectedLanguage;
+
+    public DashboardViewModel(BridgeSupervisor supervisor, AppSettings settings, SettingsStore settingsStore)
     {
         _supervisor = supervisor;
         _settings = settings;
+        _settingsStore = settingsStore;
         _supervisor.SnapshotChanged += OnSnapshotChanged;
+        LocalizationManager.LanguageChanged += OnLanguageChanged;
+
+        LanguageOptions =
+        [
+            new LanguageOption(AppLanguage.System),
+            new LanguageOption(AppLanguage.English),
+            new LanguageOption(AppLanguage.Japanese),
+        ];
+        _selectedLanguage = LanguageOptions.First(o => o.Value == settings.Language);
 
         _ticker = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Refresh());
         _ticker.Start();
@@ -94,10 +123,13 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; }
+
     public void Dispose()
     {
         _ticker.Stop();
         _supervisor.SnapshotChanged -= OnSnapshotChanged;
+        LocalizationManager.LanguageChanged -= OnLanguageChanged;
     }
 
     [RelayCommand]
@@ -146,6 +178,28 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
+    partial void OnSelectedLanguageChanged(LanguageOption value)
+    {
+        if (_settings.Language == value.Value)
+        {
+            return;
+        }
+
+        _settings.Language = value.Value;
+        _settingsStore.Save(_settings);
+        LocalizationManager.Apply(value.Value);
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        foreach (var option in LanguageOptions)
+        {
+            option.RefreshLabel();
+        }
+
+        Refresh();
+    }
+
     private void OnSnapshotChanged(object? sender, SupervisorSnapshot snapshot) =>
         Dispatcher.UIThread.Post(Refresh);
 
@@ -163,23 +217,11 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         IsStreaming = status == BridgeStatus.Streaming;
 
         LastUpdateText = session.LastSampleAt is { } last
-            ? $"updated {Math.Max(0, (int)(now - last).TotalSeconds)}s ago"
+            ? LocalizationManager.Format("Dashboard_UpdatedAgo", Math.Max(0, (int)(now - last).TotalSeconds))
             : "";
 
-        DeviceLine = session.SourceDescription ?? "No device";
-        DeviceStateText = status switch
-        {
-            BridgeStatus.NotConnected => "Not connected",
-            BridgeStatus.Searching => "Searching",
-            BridgeStatus.Connecting => "Connecting",
-            BridgeStatus.WaitingForData => "Waiting for data",
-            BridgeStatus.Streaming => "Streaming",
-            BridgeStatus.Stale => "No recent data",
-            BridgeStatus.Disconnected => "Disconnected",
-            BridgeStatus.Reconnecting => "Reconnecting",
-            BridgeStatus.Failed => "Failed",
-            _ => status.ToString(),
-        };
+        DeviceLine = session.SourceDescription ?? LocalizationManager.GetString("Device_NoDevice");
+        DeviceStateText = BridgeStatusCopy.DeviceState(status);
         DeviceStatusBrush = status switch
         {
             BridgeStatus.Streaming => AccentBrush,
@@ -192,8 +234,8 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         HasContactInfo = session.SensorContact is SensorContactStatus.Contact or SensorContactStatus.NoContact;
         ContactText = session.SensorContact switch
         {
-            SensorContactStatus.Contact => "Skin contact: detected",
-            SensorContactStatus.NoContact => "Skin contact: not detected",
+            SensorContactStatus.Contact => LocalizationManager.GetString("Device_ContactDetected"),
+            SensorContactStatus.NoContact => LocalizationManager.GetString("Device_ContactNotDetected"),
             _ => "",
         };
 
@@ -204,9 +246,9 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         OscOn = session.OscStatus != OscOutputStatus.Off;
         OscStateText = session.OscStatus switch
         {
-            OscOutputStatus.On => "OSC on",
-            OscOutputStatus.Error => "Sending failed — check the host and port.",
-            _ => "OSC off",
+            OscOutputStatus.On => LocalizationManager.GetString("Output_OscOn"),
+            OscOutputStatus.Error => LocalizationManager.GetString("Output_OscError"),
+            _ => LocalizationManager.GetString("Output_OscOff"),
         };
         OscStatusBrush = session.OscStatus switch
         {

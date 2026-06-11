@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.Logging;
 using PulseRelay.App;
+using PulseRelay.App.Localization;
 using PulseRelay.App.Logging;
 using PulseRelay.App.Settings;
 using PulseRelay.Desktop.Services;
@@ -30,6 +31,7 @@ public class App : Application
 
             var settingsStore = new SettingsStore(logger: _loggerFactory.CreateLogger<SettingsStore>());
             var settings = settingsStore.Load();
+            LocalizationManager.Apply(settings.Language);
 
             var sourceFactory = SourceFactoryProvider.Create(_loggerFactory);
             if (!sourceFactory.SupportsBle && settings.SourceKind == HeartRateSourceKind.Ble)
@@ -42,7 +44,7 @@ public class App : Application
             _supervisor = new BridgeSupervisor(
                 _session, logger: _loggerFactory.CreateLogger<BridgeSupervisor>());
 
-            var mainViewModel = new MainWindowViewModel(_supervisor, settings);
+            var mainViewModel = new MainWindowViewModel(_supervisor, settings, settingsStore);
             desktop.MainWindow = new MainWindow
             {
                 DataContext = mainViewModel,
