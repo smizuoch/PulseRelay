@@ -7,6 +7,7 @@
         Title="PulseRelay"
         Width="600" Height="480"
         MinWidth="480" MinHeight="420"
+        Icon="/Assets/AppIcon.ico"
         Background="{StaticResource AppBackgroundBrush}"
         WindowStartupLocation="CenterScreen">
 
