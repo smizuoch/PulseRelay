@@ -64,6 +64,26 @@ public class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Missing_osc_enabled_field_defaults_to_enabled()
+    {
+        var store = new SettingsStore(_directory);
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(store.FilePath, """{ "SourceKind": "Ble", "OscPort": 9000 }""");
+
+        Assert.True(store.Load().OscEnabled);
+    }
+
+    [Fact]
+    public void Explicit_osc_disabled_survives_load()
+    {
+        var store = new SettingsStore(_directory);
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(store.FilePath, """{ "OscEnabled": false }""");
+
+        Assert.False(store.Load().OscEnabled);
+    }
+
+    [Fact]
     public void Corrupt_file_yields_defaults()
     {
         var store = new SettingsStore(_directory);

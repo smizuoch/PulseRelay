@@ -169,10 +169,14 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleOsc()
     {
-        bool enable = _supervisor.Snapshot.Session.OscStatus == OscOutputStatus.Off;
+        var snapshot = _supervisor.Snapshot;
+        bool enable = snapshot.RunState == BridgeRunState.Stopped
+            ? !_settings.OscEnabled
+            : snapshot.Session.OscStatus == OscOutputStatus.Off;
         if (_supervisor.TrySetOscEnabled(enable, _settings, out _))
         {
             _settings.OscEnabled = enable;
+            _settingsStore.Save(_settings);
         }
 
         Refresh();
@@ -243,14 +247,19 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
         ShowReconnect = status == BridgeStatus.Reconnecting;
         ShowConnectHint = ShowStart && _supervisor.SupportsBle;
 
-        OscOn = session.OscStatus != OscOutputStatus.Off;
-        OscStateText = session.OscStatus switch
+        // While stopped the session snapshot always reports Off; show the persisted
+        // setting instead so a fresh install reads "OSC on" before the first Start.
+        var oscStatus = ShowStart
+            ? (_settings.OscEnabled ? OscOutputStatus.On : OscOutputStatus.Off)
+            : session.OscStatus;
+        OscOn = oscStatus != OscOutputStatus.Off;
+        OscStateText = oscStatus switch
         {
             OscOutputStatus.On => LocalizationManager.GetString("Output_OscOn"),
             OscOutputStatus.Error => LocalizationManager.GetString("Output_OscError"),
             _ => LocalizationManager.GetString("Output_OscOff"),
         };
-        OscStatusBrush = session.OscStatus switch
+        OscStatusBrush = oscStatus switch
         {
             OscOutputStatus.On => AccentBrush,
             OscOutputStatus.Error => WarnBrush,
