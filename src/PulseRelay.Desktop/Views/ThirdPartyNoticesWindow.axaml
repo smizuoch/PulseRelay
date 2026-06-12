@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PulseRelay.Desktop.ViewModels"
+        xmlns:loc="using:PulseRelay.Desktop.Localization"
+        x:Class="PulseRelay.Desktop.Views.ThirdPartyNoticesWindow"
+        x:DataType="vm:ThirdPartyNoticesViewModel"
+        Title="{loc:Loc ThirdParty_Title}"
+        Width="720" Height="520"
+        MinWidth="520" MinHeight="360"
+        Background="{StaticResource AppBackgroundBrush}"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid RowDefinitions="Auto,12,*,12,Auto" Margin="20">
+    <Border Grid.Row="0" Classes="card">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="cardtitle" Text="{loc:Loc ThirdParty_FileTitle}" />
+        <TextBlock Classes="muted"
+                   Text="{Binding NoticesPath}"
+                   TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+    </Border>
+
+    <TextBox Grid.Row="2"
+             Text="{Binding NoticesText}"
+             IsReadOnly="True"
+             AcceptsReturn="True"
+             TextWrapping="NoWrap"
+             FontFamily="Consolas,Menlo,monospace"
+             FontSize="12"
+             Background="{StaticResource CardBackgroundBrush}"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+
+    <Button Grid.Row="4"
+            HorizontalAlignment="Right"
+            Content="{loc:Loc ThirdParty_Close}"
+            Click="OnCloseClick" />
+  </Grid>
+</Window>

@@ -45,4 +45,18 @@ public partial class DashboardView : UserControl
         _diagnostics = window;
         window.Show(owner);
     }
+
+    private void OnLicensesClick(object? sender, RoutedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        var window = new ThirdPartyNoticesWindow
+        {
+            DataContext = new ThirdPartyNoticesViewModel(),
+        };
+        window.ShowDialog(owner);
+    }
 }

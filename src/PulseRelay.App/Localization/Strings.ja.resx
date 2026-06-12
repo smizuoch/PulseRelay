@@ -141,6 +141,9 @@
   <data name="Action_Diagnostics" xml:space="preserve">
     <value>診断</value>
   </data>
+  <data name="Action_Licenses" xml:space="preserve">
+    <value>ライセンス</value>
+  </data>
 
   <data name="Osc_TestSent" xml:space="preserve">
     <value>テスト値を送信しました。</value>
@@ -253,6 +256,28 @@
   </data>
   <data name="Diag_Clear" xml:space="preserve">
     <value>ログを消去</value>
+  </data>
+
+  <data name="ThirdParty_Title" xml:space="preserve">
+    <value>サードパーティ通知</value>
+  </data>
+  <data name="ThirdParty_FileTitle" xml:space="preserve">
+    <value>通知ファイル</value>
+  </data>
+  <data name="ThirdParty_Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="ThirdParty_ReadError" xml:space="preserve">
+    <value>{0} を読み込めませんでした。
+
+パス: {1}
+
+{2}</value>
+  </data>
+  <data name="ThirdParty_Missing" xml:space="preserve">
+    <value>アプリケーション実行ファイルの隣に {0} が見つかりませんでした。
+
+パス: {1}</value>
   </data>
 
   <data name="Tray_Show" xml:space="preserve">
