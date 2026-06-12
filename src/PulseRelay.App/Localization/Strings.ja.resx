@@ -169,4 +169,90 @@
     <value>日本語</value>
   </data>
 
+  <data name="Settings_Title" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Settings_OscSection" xml:space="preserve">
+    <value>OSC出力</value>
+  </data>
+  <data name="Settings_OscEnabled" xml:space="preserve">
+    <value>OSC出力を有効にする</value>
+  </data>
+  <data name="Settings_OscHost" xml:space="preserve">
+    <value>ホスト</value>
+  </data>
+  <data name="Settings_OscPort" xml:space="preserve">
+    <value>ポート</value>
+  </data>
+  <data name="Settings_OscAddress" xml:space="preserve">
+    <value>アドレス</value>
+  </data>
+  <data name="Settings_SourceSection" xml:space="preserve">
+    <value>心拍数ソース</value>
+  </data>
+  <data name="Settings_SourceBle" xml:space="preserve">
+    <value>Bluetooth LE デバイス</value>
+  </data>
+  <data name="Settings_SourceMock" xml:space="preserve">
+    <value>シミュレーション（テスト用）</value>
+  </data>
+  <data name="Settings_DeviceFilter" xml:space="preserve">
+    <value>デバイス名フィルター</value>
+  </data>
+  <data name="Settings_DeviceFilterHint" xml:space="preserve">
+    <value>任意 — アドバタイズ名の一部に一致します。</value>
+  </data>
+  <data name="Settings_AppliesNextConnect" xml:space="preserve">
+    <value>ソースの変更は次回の接続時に反映されます。</value>
+  </data>
+  <data name="Settings_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Settings_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Settings_Error_Port" xml:space="preserve">
+    <value>ポートは1〜65535の数値で入力してください。</value>
+  </data>
+  <data name="Settings_Error_Address" xml:space="preserve">
+    <value>OSCアドレスは「/」で始まる必要があります。</value>
+  </data>
+  <data name="Settings_Error_Host" xml:space="preserve">
+    <value>ホストを入力してください。</value>
+  </data>
+  <data name="Settings_Error_OscApply" xml:space="preserve">
+    <value>OSC設定を適用できませんでした — {0}</value>
+  </data>
+
+  <data name="Diag_Title" xml:space="preserve">
+    <value>診断</value>
+  </data>
+  <data name="Diag_State" xml:space="preserve">
+    <value>状態</value>
+  </data>
+  <data name="Diag_Source" xml:space="preserve">
+    <value>ソース</value>
+  </data>
+  <data name="Diag_LastBpm" xml:space="preserve">
+    <value>直近のBPM</value>
+  </data>
+  <data name="Diag_Osc" xml:space="preserve">
+    <value>OSC</value>
+  </data>
+  <data name="Diag_OscCounts" xml:space="preserve">
+    <value>送信 {0} / エラー {1}</value>
+  </data>
+  <data name="Diag_LogTitle" xml:space="preserve">
+    <value>最近のログ</value>
+  </data>
+  <data name="Diag_Copy" xml:space="preserve">
+    <value>診断情報をコピー</value>
+  </data>
+  <data name="Diag_Copied" xml:space="preserve">
+    <value>コピーしました。</value>
+  </data>
+  <data name="Diag_Clear" xml:space="preserve">
+    <value>ログを消去</value>
+  </data>
+
 </root>

@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PulseRelay.Desktop.ViewModels"
+        xmlns:loc="using:PulseRelay.Desktop.Localization"
+        x:Class="PulseRelay.Desktop.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="{loc:Loc Settings_Title}"
+        Width="440" SizeToContent="Height"
+        CanResize="False"
+        Background="{StaticResource AppBackgroundBrush}"
+        WindowStartupLocation="CenterOwner">
+
+  <StackPanel Margin="20" Spacing="12">
+
+    <!-- Language -->
+    <Border Classes="card">
+      <StackPanel Spacing="8">
+        <TextBlock Classes="cardtitle" Text="{loc:Loc Lang_Label}" />
+        <ComboBox MinWidth="160"
+                  ItemsSource="{Binding LanguageOptions}"
+                  SelectedItem="{Binding SelectedLanguage}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:LanguageOption">
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+    </Border>
+
+    <!-- OSC output -->
+    <Border Classes="card">
+      <StackPanel Spacing="8">
+        <TextBlock Classes="cardtitle" Text="{loc:Loc Settings_OscSection}" />
+        <CheckBox IsChecked="{Binding OscEnabled}" Content="{loc:Loc Settings_OscEnabled}" />
+        <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,8,Auto,8,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Classes="muted" VerticalAlignment="Center"
+                     Text="{loc:Loc Settings_OscHost}" />
+          <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding OscHost}" />
+          <TextBlock Grid.Row="2" Grid.Column="0" Classes="muted" VerticalAlignment="Center"
+                     Text="{loc:Loc Settings_OscPort}" />
+          <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding OscPortText}" />
+          <TextBlock Grid.Row="4" Grid.Column="0" Classes="muted" VerticalAlignment="Center"
+                     Text="{loc:Loc Settings_OscAddress}" />
+          <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding OscAddress}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- Heart-rate source -->
+    <Border Classes="card">
+      <StackPanel Spacing="8">
+        <TextBlock Classes="cardtitle" Text="{loc:Loc Settings_SourceSection}" />
+        <RadioButton GroupName="source"
+                     IsChecked="{Binding IsBleSource}"
+                     Content="{loc:Loc Settings_SourceBle}" />
+        <RadioButton GroupName="source"
+                     IsChecked="{Binding !IsBleSource, Mode=OneWay}"
+                     Content="{loc:Loc Settings_SourceMock}" />
+        <TextBlock Classes="muted" Text="{loc:Loc Settings_DeviceFilter}" />
+        <TextBox Text="{Binding DeviceNameFilter}" Watermark="Charge 6" />
+        <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Settings_DeviceFilterHint}" />
+        <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Settings_AppliesNextConnect}" />
+      </StackPanel>
+    </Border>
+
+    <TextBlock Foreground="{StaticResource StatusFailBrush}" TextWrapping="Wrap"
+               Text="{Binding ErrorText}"
+               IsVisible="{Binding ErrorText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="{loc:Loc Settings_Cancel}" Command="{Binding CancelCommand}" />
+      <Button Content="{loc:Loc Settings_Save}" Command="{Binding SaveCommand}" />
+    </StackPanel>
+
+  </StackPanel>
+
+</Window>

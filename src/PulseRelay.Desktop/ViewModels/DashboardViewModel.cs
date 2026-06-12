@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PulseRelay.App;
 using PulseRelay.App.Localization;
+using PulseRelay.App.Logging;
 using PulseRelay.App.Settings;
 using PulseRelay.Core.HeartRate;
 
@@ -42,6 +43,7 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     private readonly BridgeSupervisor _supervisor;
     private readonly AppSettings _settings;
     private readonly SettingsStore _settingsStore;
+    private readonly RingBufferLogSink _logSink;
     private readonly DispatcherTimer _ticker;
 
     [ObservableProperty]
@@ -101,11 +103,16 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private LanguageOption _selectedLanguage;
 
-    public DashboardViewModel(BridgeSupervisor supervisor, AppSettings settings, SettingsStore settingsStore)
+    public DashboardViewModel(
+        BridgeSupervisor supervisor,
+        AppSettings settings,
+        SettingsStore settingsStore,
+        RingBufferLogSink logSink)
     {
         _supervisor = supervisor;
         _settings = settings;
         _settingsStore = settingsStore;
+        _logSink = logSink;
         _supervisor.SnapshotChanged += OnSnapshotChanged;
         LocalizationManager.LanguageChanged += OnLanguageChanged;
 
@@ -124,6 +131,10 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     }
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; }
+
+    public SettingsViewModel CreateSettingsViewModel() => new(_supervisor, _settings, _settingsStore);
+
+    public DiagnosticsViewModel CreateDiagnosticsViewModel() => new(_supervisor, _settings, _logSink);
 
     public void Dispose()
     {
@@ -201,6 +212,9 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
             option.RefreshLabel();
         }
 
+        // The settings dialog can change the language too; keep the footer picker in
+        // sync. Loop-safe: OnSelectedLanguageChanged early-returns on an equal value.
+        SelectedLanguage = LanguageOptions.First(o => o.Value == _settings.Language);
         Refresh();
     }
 

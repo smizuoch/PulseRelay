@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PulseRelay.Desktop.ViewModels"
+        xmlns:loc="using:PulseRelay.Desktop.Localization"
+        x:Class="PulseRelay.Desktop.Views.DiagnosticsWindow"
+        x:DataType="vm:DiagnosticsViewModel"
+        Title="{loc:Loc Diag_Title}"
+        Width="640" Height="480"
+        MinWidth="480" MinHeight="360"
+        Background="{StaticResource AppBackgroundBrush}"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid RowDefinitions="Auto,12,*" Margin="20">
+
+    <!-- Current state -->
+    <Border Grid.Row="0" Classes="card">
+      <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Classes="muted" Text="{loc:Loc Diag_State}" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StateText}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Classes="muted" Text="{loc:Loc Diag_Source}" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SourceText}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Row="4" Grid.Column="0" Classes="muted" Text="{loc:Loc Diag_LastBpm}" />
+        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding BpmText}" />
+        <TextBlock Grid.Row="6" Grid.Column="0" Classes="muted" Text="{loc:Loc Diag_Osc}" />
+        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding OscText}" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <!-- Recent log -->
+    <Border Grid.Row="2" Classes="card">
+      <Grid RowDefinitions="Auto,8,*,8,Auto">
+        <TextBlock Grid.Row="0" Classes="cardtitle" Text="{loc:Loc Diag_LogTitle}" />
+        <ListBox Grid.Row="2"
+                 ItemsSource="{Binding LogLines}"
+                 FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                 Background="Transparent">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+        </ListBox>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+          <TextBlock Classes="muted" VerticalAlignment="Center"
+                     Text="{loc:Loc Diag_Copied}" IsVisible="{Binding CopiedVisible}" />
+          <Button Content="{loc:Loc Diag_Clear}" Command="{Binding ClearLogCommand}" />
+          <Button Content="{loc:Loc Diag_Copy}" Click="OnCopyClick" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+  </Grid>
+
+</Window>

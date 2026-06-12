@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Microsoft.Extensions.Logging.Abstractions;
 using PulseRelay.App;
 using PulseRelay.App.Localization;
+using PulseRelay.App.Logging;
 using PulseRelay.App.Settings;
 using PulseRelay.Desktop.Localization;
 using PulseRelay.Desktop.ViewModels;
@@ -63,7 +64,8 @@ public class LocBindingTests
         var session = new BridgeSession(new FakeSourceFactory(), NullLoggerFactory.Instance);
         var supervisor = new BridgeSupervisor(session);
         var settings = new AppSettings();
-        using var viewModel = new DashboardViewModel(supervisor, settings, new SettingsStore(directory));
+        using var viewModel = new DashboardViewModel(
+            supervisor, settings, new SettingsStore(directory), new RingBufferLogSink());
 
         LocalizationManager.Apply(AppLanguage.English);
         Assert.Equal("OSC on", viewModel.OscStateText);

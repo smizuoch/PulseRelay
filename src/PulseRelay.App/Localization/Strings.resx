@@ -168,4 +168,90 @@
   <data name="Lang_Japanese" xml:space="preserve">
     <value>日本語</value>
   </data>
+
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings_OscSection" xml:space="preserve">
+    <value>OSC OUTPUT</value>
+  </data>
+  <data name="Settings_OscEnabled" xml:space="preserve">
+    <value>Enable OSC output</value>
+  </data>
+  <data name="Settings_OscHost" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="Settings_OscPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Settings_OscAddress" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="Settings_SourceSection" xml:space="preserve">
+    <value>HEART-RATE SOURCE</value>
+  </data>
+  <data name="Settings_SourceBle" xml:space="preserve">
+    <value>Bluetooth LE device</value>
+  </data>
+  <data name="Settings_SourceMock" xml:space="preserve">
+    <value>Simulated (test) source</value>
+  </data>
+  <data name="Settings_DeviceFilter" xml:space="preserve">
+    <value>Device name filter</value>
+  </data>
+  <data name="Settings_DeviceFilterHint" xml:space="preserve">
+    <value>Optional — matches part of the advertised name.</value>
+  </data>
+  <data name="Settings_AppliesNextConnect" xml:space="preserve">
+    <value>Source changes take effect the next time you connect.</value>
+  </data>
+  <data name="Settings_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Settings_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Settings_Error_Port" xml:space="preserve">
+    <value>Port must be a number between 1 and 65535.</value>
+  </data>
+  <data name="Settings_Error_Address" xml:space="preserve">
+    <value>OSC address must start with "/".</value>
+  </data>
+  <data name="Settings_Error_Host" xml:space="preserve">
+    <value>Host must not be empty.</value>
+  </data>
+  <data name="Settings_Error_OscApply" xml:space="preserve">
+    <value>Couldn't apply the OSC settings — {0}</value>
+  </data>
+
+  <data name="Diag_Title" xml:space="preserve">
+    <value>Diagnostics</value>
+  </data>
+  <data name="Diag_State" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="Diag_Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Diag_LastBpm" xml:space="preserve">
+    <value>Last BPM</value>
+  </data>
+  <data name="Diag_Osc" xml:space="preserve">
+    <value>OSC</value>
+  </data>
+  <data name="Diag_OscCounts" xml:space="preserve">
+    <value>sent {0} / errors {1}</value>
+  </data>
+  <data name="Diag_LogTitle" xml:space="preserve">
+    <value>RECENT LOG</value>
+  </data>
+  <data name="Diag_Copy" xml:space="preserve">
+    <value>Copy diagnostics</value>
+  </data>
+  <data name="Diag_Copied" xml:space="preserve">
+    <value>Copied.</value>
+  </data>
+  <data name="Diag_Clear" xml:space="preserve">
+    <value>Clear log</value>
+  </data>
 </root>

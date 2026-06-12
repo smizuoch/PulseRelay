@@ -18,6 +18,22 @@
 
   <Application.Styles>
     <FluentTheme />
+
+    <!-- Shared card look for Dashboard, Settings, and Diagnostics windows. -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.cardtitle">
+      <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
   </Application.Styles>
 
 </Application>

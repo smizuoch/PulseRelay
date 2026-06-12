@@ -44,7 +44,7 @@ public class App : Application
             _supervisor = new BridgeSupervisor(
                 _session, logger: _loggerFactory.CreateLogger<BridgeSupervisor>());
 
-            var mainViewModel = new MainWindowViewModel(_supervisor, settings, settingsStore);
+            var mainViewModel = new MainWindowViewModel(_supervisor, settings, settingsStore, logSink);
             desktop.MainWindow = new MainWindow
             {
                 DataContext = mainViewModel,
