@@ -104,7 +104,7 @@
     <value>皮膚接触: なし</value>
   </data>
   <data name="Device_ConnectHint" xml:space="preserve">
-    <value>先にデバイスで心拍数の共有を開始してください。</value>
+    <value>先にデバイス側で心拍共有を開始してください。</value>
   </data>
 
   <data name="Output_CardTitle" xml:space="preserve">
@@ -169,21 +169,4 @@
     <value>日本語</value>
   </data>
 
-  <data name="Guide_Share_Title" xml:space="preserve">
-    <value>心拍数を共有するには？</value>
-  </data>
-  <data name="Guide_Share_Intro" xml:space="preserve">
-    <value>多くの心拍数デバイスでは、共有（ブロードキャスト）をデバイス側で開始する必要があります。PulseRelay が代わりに開始することはできません — 毎回デバイス側で操作してください。</value>
-  </data>
-  <data name="Guide_Share_Charge6_Title" xml:space="preserve">
-    <value>Fitbit Charge 6</value>
-  </data>
-  <data name="Guide_Share_Charge6_Steps" xml:space="preserve">
-    <value>1. トラッカーで「HR on equipment」（装置で心拍数の共有）タイルを開きます。
-2. 「共有」をタップし、「開始」をタップします。
-3. トラッカーをその画面のままにしてください。</value>
-  </data>
-  <data name="Guide_Share_Charge6_Note" xml:space="preserve">
-    <value>注意: Charge 6 が同時に共有できるのは 1 つのアプリ・機器だけです。他の接続（CLI プローブを含む）を先に終了してください。</value>
-  </data>
 </root>

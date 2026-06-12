@@ -104,7 +104,7 @@
     <value>Skin contact: not detected</value>
   </data>
   <data name="Device_ConnectHint" xml:space="preserve">
-    <value>Make sure your device is sharing its heart rate first.</value>
+    <value>Start heart-rate sharing on your device first.</value>
   </data>
 
   <data name="Output_CardTitle" xml:space="preserve">
@@ -167,23 +167,5 @@
   </data>
   <data name="Lang_Japanese" xml:space="preserve">
     <value>日本語</value>
-  </data>
-
-  <data name="Guide_Share_Title" xml:space="preserve">
-    <value>How do I share my heart rate?</value>
-  </data>
-  <data name="Guide_Share_Intro" xml:space="preserve">
-    <value>Most heart-rate devices must be told to broadcast. PulseRelay can't switch this on for you — you do it on the device each session.</value>
-  </data>
-  <data name="Guide_Share_Charge6_Title" xml:space="preserve">
-    <value>Fitbit Charge 6</value>
-  </data>
-  <data name="Guide_Share_Charge6_Steps" xml:space="preserve">
-    <value>1. On the tracker, open the "HR on equipment" tile.
-2. Tap "Share", then "Start".
-3. Keep the tracker on that screen.</value>
-  </data>
-  <data name="Guide_Share_Charge6_Note" xml:space="preserve">
-    <value>Note: the Charge 6 shares with one app or equipment at a time. Close other connections (including the CLI probe) first.</value>
   </data>
 </root>

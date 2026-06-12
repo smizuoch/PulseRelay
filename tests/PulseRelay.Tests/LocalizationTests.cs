@@ -51,11 +51,6 @@ public class LocalizationTests
         "Lang_System",
         "Lang_English",
         "Lang_Japanese",
-        "Guide_Share_Title",
-        "Guide_Share_Intro",
-        "Guide_Share_Charge6_Title",
-        "Guide_Share_Charge6_Steps",
-        "Guide_Share_Charge6_Note",
     ];
 
     private static Dictionary<string, string> Entries(CultureInfo culture)
