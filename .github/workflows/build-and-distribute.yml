@@ -1,0 +1,137 @@
+name: Build and distribute
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-and-distribute-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: 10.0.301
+  PROJECT_PATH: src/PulseRelay.Desktop/PulseRelay.Desktop.csproj
+  RELEASE_TAG: main-latest
+  PRODUCT_NAME: PulseRelay
+  RID: win-x64
+  TARGET_FRAMEWORK: net10.0-windows10.0.19041.0
+
+jobs:
+  build-test-package:
+    name: Build, test, and package Windows zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore PulseRelay.sln
+
+      - name: Build
+        run: dotnet build PulseRelay.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test PulseRelay.sln --configuration Release --no-build
+
+      - name: Publish Windows app
+        run: >
+          dotnet publish "${{ env.PROJECT_PATH }}"
+          --configuration Release
+          --framework "${{ env.TARGET_FRAMEWORK }}"
+          --runtime "${{ env.RID }}"
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          -p:RestoreForce=true
+          --output "artifacts/publish/${{ env.PRODUCT_NAME }}-${{ env.RID }}"
+
+      - name: Add distribution documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="artifacts/publish/${PRODUCT_NAME}-${RID}"
+
+          cp LICENSE README.md README.ja.md "$package_dir/"
+          rm -rf "$package_dir/docs"
+          cp -R docs "$package_dir/docs"
+
+      - name: Create zip package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="artifacts/publish/${PRODUCT_NAME}-${RID}"
+          zip_path="${GITHUB_WORKSPACE}/artifacts/${PRODUCT_NAME}-${RID}.zip"
+          checksum_path="${GITHUB_WORKSPACE}/artifacts/${PRODUCT_NAME}-${RID}.zip.sha256"
+
+          rm -f "$zip_path" "$checksum_path"
+          (cd "$package_dir" && zip -r "$zip_path" .)
+          (cd "${GITHUB_WORKSPACE}/artifacts" && sha256sum "${PRODUCT_NAME}-${RID}.zip" > "${PRODUCT_NAME}-${RID}.zip.sha256")
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRODUCT_NAME }}-${{ env.RID }}
+          path: |
+            artifacts/${{ env.PRODUCT_NAME }}-${{ env.RID }}.zip
+            artifacts/${{ env.PRODUCT_NAME }}-${{ env.RID }}.zip.sha256
+          if-no-files-found: error
+
+      - name: Update latest main release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG}"
+          zip_path="artifacts/${PRODUCT_NAME}-${RID}.zip"
+          checksum_path="artifacts/${PRODUCT_NAME}-${RID}.zip.sha256"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          commit_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          notes_path="${RUNNER_TEMP}/release-notes.md"
+
+          cat > "$notes_path" <<EOF
+          Automated zip build from the latest main commit.
+
+          Commit: ${commit_url}
+          Workflow run: ${run_url}
+
+          Download ${PRODUCT_NAME}-${RID}.zip, extract it, and run PulseRelay.Desktop.exe.
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --force "$tag" "${GITHUB_SHA}"
+          git push --force origin "refs/tags/$tag"
+
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" "$zip_path" "$checksum_path" --clobber
+            gh release edit "$tag" \
+              --title "${PRODUCT_NAME} latest main build" \
+              --notes-file "$notes_path" \
+              --prerelease \
+              --latest=false
+          else
+            gh release create "$tag" "$zip_path" "$checksum_path" \
+              --title "${PRODUCT_NAME} latest main build" \
+              --notes-file "$notes_path" \
+              --prerelease \
+              --latest=false \
+              --target "${GITHUB_SHA}"
+          fi
