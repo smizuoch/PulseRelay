@@ -55,6 +55,31 @@ public static class BridgeStatusCopy
         _ => status.ToString(),
     };
 
+    /// <summary>
+    /// Device line for the device card. A BLE source reports "BLE &lt;unknown&gt;" before the
+    /// scan (and "BLE &lt;unnamed&gt;" when the peripheral advertises no name); those
+    /// placeholders are never shown — the user's device name filter or a generic label
+    /// substitutes. The literals mirror BleHeartRateSource, which cross-platform code
+    /// cannot reference (Windows-only project).
+    /// </summary>
+    public static string DeviceLine(string? sourceDescription, string? deviceNameFilter)
+    {
+        if (sourceDescription is null)
+        {
+            return LocalizationManager.GetString("Device_NoDevice");
+        }
+
+        if (sourceDescription.Contains("<unknown>", StringComparison.Ordinal)
+            || sourceDescription.Contains("<unnamed>", StringComparison.Ordinal))
+        {
+            return string.IsNullOrWhiteSpace(deviceNameFilter)
+                ? LocalizationManager.GetString("Device_BleFallback")
+                : deviceNameFilter;
+        }
+
+        return sourceDescription;
+    }
+
     private static string FailedHeadline(BridgeSnapshot snapshot) => snapshot.FailureKind switch
     {
         BridgeFailureKind.DeviceNotFound => LocalizationManager.GetString("Error_DeviceNotFound"),

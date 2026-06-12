@@ -57,6 +57,26 @@ public class BridgeSessionTests
     }
 
     [Fact]
+    public async Task Connect_refreshes_source_description_after_start()
+    {
+        // Mimics a BLE source: the name placeholder is only replaced during StartAsync.
+        var factory = new FakeSourceFactory
+        {
+            Configure = s =>
+            {
+                s.Description = "BLE <unknown>";
+                s.DescriptionAfterStart = "BLE Charge 6";
+            },
+        };
+        await using var session = new BridgeSession(factory, NullLoggerFactory.Instance);
+
+        bool connected = await session.ConnectAsync(MockSettings(), CancellationToken.None);
+
+        Assert.True(connected);
+        Assert.Equal("BLE Charge 6", session.Snapshot.SourceDescription);
+    }
+
+    [Fact]
     public async Task Disconnect_resets_snapshot()
     {
         await using var session = CreateSession();

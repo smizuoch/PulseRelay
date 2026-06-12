@@ -14,7 +14,13 @@ public sealed class FakeHeartRateSource : IHeartRateSource
     /// <summary>When set, <see cref="StartAsync"/> throws this (e.g. a scan timeout).</summary>
     public Exception? StartFailure { get; set; }
 
-    public string Description => "Fake device";
+    /// <summary>
+    /// When set, <see cref="StartAsync"/> swaps <see cref="Description"/> to this value —
+    /// mimics a BLE source that only learns the device name during the scan.
+    /// </summary>
+    public string? DescriptionAfterStart { get; set; }
+
+    public string Description { get; set; } = "Fake device";
 
     public HeartRateSourceState State { get; private set; } = HeartRateSourceState.Idle;
 
@@ -29,6 +35,11 @@ public sealed class FakeHeartRateSource : IHeartRateSource
         {
             SetState(HeartRateSourceState.Failed);
             throw StartFailure;
+        }
+
+        if (DescriptionAfterStart is not null)
+        {
+            Description = DescriptionAfterStart;
         }
 
         SetState(HeartRateSourceState.Subscribing);
@@ -81,6 +92,9 @@ public sealed class FakeSourceFactory : IHeartRateSourceFactory
     /// <summary>Applied to every new source; lets tests fail the first N attempts.</summary>
     public Func<int, Exception?>? StartFailureForAttempt { get; set; }
 
+    /// <summary>Applied to every new source right after creation.</summary>
+    public Action<FakeHeartRateSource>? Configure { get; set; }
+
     public FakeHeartRateSource Latest => Created[^1];
 
     public bool SupportsBle => true;
@@ -91,6 +105,7 @@ public sealed class FakeSourceFactory : IHeartRateSourceFactory
         {
             StartFailure = StartFailureForAttempt?.Invoke(Created.Count),
         };
+        Configure?.Invoke(source);
         Created.Add(source);
         return source;
     }

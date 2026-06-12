@@ -220,7 +220,7 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
             ? LocalizationManager.Format("Dashboard_UpdatedAgo", Math.Max(0, (int)(now - last).TotalSeconds))
             : "";
 
-        DeviceLine = session.SourceDescription ?? LocalizationManager.GetString("Device_NoDevice");
+        DeviceLine = BridgeStatusCopy.DeviceLine(session.SourceDescription, _settings.DeviceNameFilter);
         DeviceStateText = BridgeStatusCopy.DeviceState(status);
         DeviceStatusBrush = status switch
         {

@@ -67,6 +67,9 @@
   <data name="Device_NoDevice" xml:space="preserve">
     <value>No device</value>
   </data>
+  <data name="Device_BleFallback" xml:space="preserve">
+    <value>Bluetooth LE device</value>
+  </data>
   <data name="Device_State_NotConnected" xml:space="preserve">
     <value>Not connected</value>
   </data>

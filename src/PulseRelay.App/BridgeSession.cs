@@ -130,6 +130,9 @@ public sealed class BridgeSession : IAsyncDisposable
         try
         {
             await source.StartAsync(cancellationToken);
+            // A BLE source only learns the device name during StartAsync (scan + GATT read),
+            // so the description captured above may still hold a placeholder. Re-publish it.
+            Update(s => s with { SourceDescription = source.Description });
             _logger.LogInformation("Bridge connected: {Description}", source.Description);
             return true;
         }
@@ -264,7 +267,12 @@ public sealed class BridgeSession : IAsyncDisposable
     }
 
     private void OnStateChanged(object? sender, HeartRateSourceState state) =>
-        Update(s => s with { Status = Map(state) });
+        Update(s => s with
+        {
+            Status = Map(state),
+            // Keep the name current while StartAsync is still running (scan -> connect).
+            SourceDescription = (sender as IHeartRateSource)?.Description ?? s.SourceDescription,
+        });
 
     private void OnSampleReceived(object? sender, HeartRateSample sample) =>
         Update(s => s with

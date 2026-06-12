@@ -27,6 +27,8 @@ public class LocalizationTests
         "Error_OscConfig",
         "Error_DeviceDisconnected",
         "Device_CardTitle",
+        "Device_NoDevice",
+        "Device_BleFallback",
         "Device_State_Streaming",
         "Device_ContactDetected",
         "Device_ContactNotDetected",
