@@ -254,4 +254,17 @@
   <data name="Diag_Clear" xml:space="preserve">
     <value>Clear log</value>
   </data>
+
+  <data name="Tray_Show" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="Tray_OscOn" xml:space="preserve">
+    <value>Turn OSC on</value>
+  </data>
+  <data name="Tray_OscOff" xml:space="preserve">
+    <value>Turn OSC off</value>
+  </data>
+  <data name="Tray_Quit" xml:space="preserve">
+    <value>Quit</value>
+  </data>
 </root>

@@ -17,6 +17,7 @@ public class App : Application
     private BridgeSupervisor? _supervisor;
     private BridgeSession? _session;
     private ILoggerFactory? _loggerFactory;
+    private TrayIconController? _tray;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -49,6 +50,7 @@ public class App : Application
             {
                 DataContext = mainViewModel,
             };
+            _tray = new TrayIconController(desktop, _supervisor, settings, settingsStore);
             desktop.Exit += OnExit;
 
             if (settings.AutoConnectOnLaunch)
@@ -62,6 +64,7 @@ public class App : Application
 
     private void OnExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
+        _tray?.Dispose();
         _supervisor?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _session?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _loggerFactory?.Dispose();

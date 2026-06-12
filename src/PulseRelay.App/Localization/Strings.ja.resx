@@ -255,4 +255,17 @@
     <value>ログを消去</value>
   </data>
 
+  <data name="Tray_Show" xml:space="preserve">
+    <value>表示</value>
+  </data>
+  <data name="Tray_OscOn" xml:space="preserve">
+    <value>OSCをオンにする</value>
+  </data>
+  <data name="Tray_OscOff" xml:space="preserve">
+    <value>OSCをオフにする</value>
+  </data>
+  <data name="Tray_Quit" xml:space="preserve">
+    <value>終了</value>
+  </data>
+
 </root>

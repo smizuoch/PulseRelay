@@ -79,6 +79,10 @@ public class LocalizationTests
         "Diag_Copy",
         "Diag_Copied",
         "Diag_Clear",
+        "Tray_Show",
+        "Tray_OscOn",
+        "Tray_OscOff",
+        "Tray_Quit",
     ];
 
     private static Dictionary<string, string> Entries(CultureInfo culture)
