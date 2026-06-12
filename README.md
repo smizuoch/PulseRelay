@@ -1,13 +1,75 @@
 # PulseRelay
 
-PulseRelay is a local bridge between Bluetooth LE heart-rate sources and OSC-compatible
+日本語版は [README.ja.md](README.ja.md) をご覧ください。
+
+PulseRelay is a local bridge between Bluetooth LE heart-rate devices and OSC-compatible
 applications. It connects directly to any tracker that implements the standard Bluetooth
 **Heart Rate Service (0x180D)** — no phone, no cloud, no vendor API in the real-time path —
-and can forward BPM to a local OSC endpoint over UDP.
+and forwards BPM to a local OSC endpoint over UDP (for example VRChat).
 
-Current status: **CLI probe stage.** The first milestone is proving that a compatible
-tracker can stream Heart Rate Measurement (0x2A37) notifications to a Windows 11 PC.
-No GUI yet, by design.
+Current status: **desktop app + CLI probe.** The Avalonia desktop app streams live BPM
+from a real tracker on Windows 11 and forwards it over OSC; this has been verified on
+hardware with a Fitbit Charge 6. macOS/Linux builds run with a simulated source
+(Bluetooth LE support is Windows-only for now).
+
+## Quick start (Windows 11)
+
+```sh
+dotnet run --project src/PulseRelay.Desktop -f net10.0-windows10.0.19041.0
+```
+
+1. Start heart-rate sharing **on your device first** (see the Charge 6 steps below).
+2. Click **Start** in PulseRelay. The dashboard shows the device, live BPM, and OSC state.
+3. OSC output is **on by default** and sends to `127.0.0.1:9000` at
+   `/avatar/parameters/VRCOSC/Heartrate/Value`.
+
+## Using a Fitbit Charge 6 (example device)
+
+The tracker side cannot be automated — PulseRelay can never press Share for you.
+Each session:
+
+1. On the tracker, open the **HR on equipment** tile and keep its screen awake.
+2. Tap **Share**, then **Start** on the tracker when it asks to share heart rate.
+3. Click **Start** in PulseRelay.
+4. Keep sharing active on the tracker for the whole session — leaving the Share screen
+   stops the broadcast (PulseRelay will auto-reconnect once you start sharing again).
+
+Note: the Charge 6 connects to **one** app or piece of equipment at a time. Close other
+connections (other PCs, gym equipment, the CLI probe) before starting.
+
+Any other tracker that exposes the standard Heart Rate Service should work the same way;
+use its own "broadcast/share heart rate" feature and set the device name filter in
+PulseRelay's settings if several BLE devices are nearby.
+
+## OSC output
+
+| Setting | Default |
+|---|---|
+| Host | `127.0.0.1` |
+| Port | `9000` |
+| Address | `/avatar/parameters/VRCOSC/Heartrate/Value` (int) |
+
+All configurable in the app's settings (and via CLI flags for the probe).
+See [docs/vrchat-osc.md](docs/vrchat-osc.md).
+
+## Troubleshooting
+
+- **The app can't find the device** — make sure the device is actually sharing
+  (Charge 6: the "HR on equipment" screen must be open with Share started), Bluetooth is
+  on, and the device is near the PC. If several BLE devices are around, set the device
+  name filter (e.g. `Charge 6`) in settings.
+- **The device line shows a generic name** — the UI shows the device's advertised name
+  once connected (e.g. `BLE Charge 6`), falling back to your device name filter or
+  "Bluetooth LE device". It should never show `BLE <unknown>` while connected; if it
+  does, please report it.
+- **OSC isn't received** — check the receiving app listens on the configured host/port
+  (VRChat: enable OSC in the action menu; default port 9000) and that the OSC address
+  matches what your avatar/receiver expects. The Output card shows send errors.
+- **"Device disconnected" right after connecting** — the device is probably still
+  connected to another app or equipment. Disconnect it everywhere else, restart sharing,
+  and Start again.
+- **No data after ~10 s** — the dashboard flags stale data and reconnects automatically
+  after 30 s of silence. First readings can take ~20 s on some trackers; that is normal.
 
 ## Layout
 
@@ -16,8 +78,10 @@ No GUI yet, by design.
 | `src/PulseRelay.Core` | `net10.0` | Platform-neutral models, 0x2A37 parser, source interfaces, mock source |
 | `src/PulseRelay.Osc` | `net10.0` | Minimal OSC 1.0 encoder + UDP sender |
 | `src/PulseRelay.WindowsBle` | `net10.0-windows10.0.19041.0` | WinRT GATT client (scan, pair, subscribe) |
+| `src/PulseRelay.App` | `net10.0` | Bridge session/supervisor, settings, localization |
+| `src/PulseRelay.Desktop` | both | Avalonia desktop app (dashboard) |
 | `src/PulseRelay.Probe` | both | CLI: `scan` / `connect` / `mock` |
-| `tests/PulseRelay.Tests` | `net10.0` | xunit unit tests |
+| `tests/PulseRelay.Tests` | `net10.0` | xunit unit + headless UI tests |
 
 See [docs/architecture.md](docs/architecture.md) for the design.
 
@@ -31,7 +95,7 @@ dotnet test  PulseRelay.CrossPlatform.slnf
 dotnet build PulseRelay.sln                  # full solution incl. Windows BLE (compiles anywhere, runs BLE only on Windows)
 ```
 
-## Running
+## Running the CLI probe
 
 On any platform — synthetic heart rate, optionally forwarded over OSC:
 
@@ -43,27 +107,13 @@ On Windows 11 — real BLE (see [docs/charge6-verification.md](docs/charge6-veri
 for the full checklist):
 
 ```sh
-dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- scan --all --verbose
 dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- scan --service 180D --verbose
 dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- connect --name "Charge 6" --verbose
 ```
 
-## Using a Fitbit Charge 6 (or similar tracker)
-
-The connection cannot be fully automated — the tracker requires user interaction:
-
-1. Open the **HR on equipment** tile on the tracker and keep its screen awake.
-2. Run `connect`. When the tracker asks to share heart rate, tap **Share**, then **Start**.
-3. The tracker connects to **one** equipment/app at a time; disconnect other consumers first.
-
 PulseRelay deliberately does not use the Fitbit Web API, Google Health API, or any cloud
-service for real-time BPM.
-
-## OSC output
-
-Default endpoint `127.0.0.1:9000`, default address
-`/avatar/parameters/VRCOSC/Heartrate/Value` (int). All configurable via CLI flags.
-See [docs/vrchat-osc.md](docs/vrchat-osc.md).
+service for real-time BPM, and never persists Bluetooth addresses (tracker addresses are
+rotating RPAs, not stable identities).
 
 ## License
 

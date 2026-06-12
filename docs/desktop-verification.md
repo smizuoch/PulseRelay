@@ -49,3 +49,24 @@ sources + `FakeTimeProvider`); the manual checklist below covers the real-hardwa
    System follows the OS language.
 7. Logs (app + probe) remain English/ASCII; `settings.json` contains no address/MAC field.
 8. CLI probe `connect` still streams (regression sanity; probe code untouched).
+
+## Manual Windows checklist (2026-06 polish pass: display name, OSC default, localization, UX)
+
+1. Delete `%APPDATA%\PulseRelay\settings.json`, launch → Output card shows **OSC on**
+   before the first Start (fresh settings default).
+2. Turn OSC off, restart the app → stays off (explicit choice persisted). Turn it back on.
+3. Connect to the Charge 6 → device line shows **"BLE Charge 6"** (or the name filter /
+   "Bluetooth LE device" fallback) — never "BLE \<unknown\>" while connected.
+4. Switch 日本語 ↔ English repeatedly → every visible string follows, specifically:
+   Start/開始, Turn on/オンにする, Turn off/オフにする, and the connect hint
+   "Start heart-rate sharing on your device first." / 「先にデバイス側で心拍共有を開始してください。」
+5. The dashboard no longer shows the "How do I share my heart rate?" guide expander;
+   only the one-line hint appears while stopped.
+6. Charge 6 still streams BPM; OSC values still arrive; Stop still prevents reconnect;
+   only one active source exists at a time (Start is idempotent, tray/dashboard agree).
+7. Settings dialog: invalid port (`0`, `70000`, `abc`) and address without `/` are
+   rejected with a localized error; valid edits persist and re-apply OSC live.
+8. Diagnostics window: shows state/source/BPM/OSC counters and recent logs (English);
+   "Copy diagnostics" output contains no `AA:BB:CC:DD:EE:FF`-style addresses.
+9. Tray icon: Show/Start/Stop/OSC toggle/Quit work in both languages; Quit exits cleanly
+   with no ghost tray icon and no lingering process.
