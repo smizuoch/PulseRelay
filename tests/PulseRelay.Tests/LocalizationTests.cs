@@ -149,6 +149,20 @@ public class LocalizationTests
     }
 
     [Fact]
+    public void Reported_button_strings_localize_to_expected_copy()
+    {
+        var en = CultureInfo.GetCultureInfo("en");
+        var ja = CultureInfo.GetCultureInfo("ja");
+
+        Assert.Equal("Start", LocalizationManager.GetString("Action_Start", en));
+        Assert.Equal("開始", LocalizationManager.GetString("Action_Start", ja));
+        Assert.Equal("Turn on", LocalizationManager.GetString("Output_TurnOn", en));
+        Assert.Equal("オンにする", LocalizationManager.GetString("Output_TurnOn", ja));
+        Assert.Equal("Turn off", LocalizationManager.GetString("Output_TurnOff", en));
+        Assert.Equal("オフにする", LocalizationManager.GetString("Output_TurnOff", ja));
+    }
+
+    [Fact]
     public void Missing_key_returns_key_instead_of_throwing()
     {
         Assert.Equal("No_Such_Key", LocalizationManager.GetString("No_Such_Key"));

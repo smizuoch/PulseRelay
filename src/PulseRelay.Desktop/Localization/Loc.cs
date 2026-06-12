@@ -5,7 +5,7 @@ namespace PulseRelay.Desktop.Localization;
 
 /// <summary>
 /// Bindable indexer over the localization resources. When the language changes it raises
-/// a change for <c>Item[]</c>, so every <c>{loc:Loc Key}</c> binding refreshes live without
+/// a change for the indexer, so every <c>{loc:Loc Key}</c> binding refreshes live without
 /// a restart.
 /// </summary>
 public sealed class Loc : INotifyPropertyChanged
@@ -14,8 +14,10 @@ public sealed class Loc : INotifyPropertyChanged
 
     private Loc()
     {
+        // Avalonia listens for "Item" (its CommonPropertyNames.IndexerName), not WPF's
+        // "Item[]" - raising the wrong name silently never refreshes any binding.
         LocalizationManager.LanguageChanged += (_, _) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item"));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
