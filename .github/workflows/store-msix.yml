@@ -1,0 +1,98 @@
+name: Build Microsoft Store MSIX
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: MSIX version in A.B.C.0 format
+        required: true
+        default: 1.0.0.0
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-msix-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  STORE_PACKAGE_IDENTITY_NAME: ${{ vars.STORE_PACKAGE_IDENTITY_NAME }}
+  STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+  STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+  MSIX_VERSION: ${{ inputs.version }}
+
+jobs:
+  build-store-msix:
+    name: Build Store MSIX
+    runs-on: windows-2025
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Validate Store identity variables
+        shell: pwsh
+        run: |
+          $required = [ordered]@{
+            STORE_PACKAGE_IDENTITY_NAME = $env:STORE_PACKAGE_IDENTITY_NAME
+            STORE_PUBLISHER = $env:STORE_PUBLISHER
+            STORE_PUBLISHER_DISPLAY_NAME = $env:STORE_PUBLISHER_DISPLAY_NAME
+          }
+
+          foreach ($entry in $required.GetEnumerator()) {
+            if ([string]::IsNullOrWhiteSpace($entry.Value)) {
+              throw "Missing GitHub repository variable: $($entry.Key)"
+            }
+          }
+
+      - name: Create temporary Store identity file
+        shell: pwsh
+        run: |
+          $identity = [ordered]@{
+            PackageIdentityName = $env:STORE_PACKAGE_IDENTITY_NAME
+            Publisher = $env:STORE_PUBLISHER
+            PublisherDisplayName = $env:STORE_PUBLISHER_DISPLAY_NAME
+          }
+
+          $identityFile = Join-Path $env:RUNNER_TEMP "store-identity.json"
+          $identity |
+            ConvertTo-Json |
+            Set-Content -LiteralPath $identityFile -Encoding utf8
+
+          "STORE_IDENTITY_FILE=$identityFile" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore PulseRelay.sln
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build PulseRelay.sln --configuration Release --no-restore
+
+      - name: Test
+        shell: pwsh
+        run: dotnet test PulseRelay.sln --configuration Release --no-build
+
+      - name: Build Store MSIX
+        shell: pwsh
+        run: |
+          .\scripts\build-store-msix.ps1 `
+            -IdentityFile "$env:STORE_IDENTITY_FILE" `
+            -Version "$env:MSIX_VERSION"
+
+      - name: Upload Store-ready package
+        uses: actions/upload-artifact@v7
+        with:
+          name: PulseRelay-Store-${{ inputs.version }}
+          path: |
+            artifacts/store/*.msix
+            artifacts/store/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
