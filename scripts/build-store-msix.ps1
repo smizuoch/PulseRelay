@@ -9,7 +9,7 @@ param(
 
     [string] $Configuration = "Release",
 
-    [ValidateSet("win-x64")]
+    [ValidateSet("win-x64", "win-arm64")]
     [string] $Runtime = "win-x64"
 )
 
@@ -108,11 +108,17 @@ $manifestTemplate = Join-Path $repositoryRoot "packaging\msix\AppxManifest.templ
 $projectPath = Join-Path $repositoryRoot "src\PulseRelay.Desktop\PulseRelay.Desktop.csproj"
 $sourceLogo = Join-Path $repositoryRoot "src\PulseRelay.Desktop\Assets\PulseRelay.png"
 $storeRoot = Join-Path $repositoryRoot "artifacts\store"
-$payloadDirectory = Join-Path $storeRoot "payload"
-$stagingDirectory = Join-Path $storeRoot "staging"
-$inspectDirectory = Join-Path $storeRoot "inspect"
+$packageArchitecture = switch ($Runtime) {
+    "win-x64" { "x64" }
+    "win-arm64" { "arm64" }
+    default { throw "Unsupported runtime: $Runtime" }
+}
+$workDirectory = Join-Path $storeRoot $packageArchitecture
+$payloadDirectory = Join-Path $workDirectory "payload"
+$stagingDirectory = Join-Path $workDirectory "staging"
+$inspectDirectory = Join-Path $workDirectory "inspect"
 $assetsDirectory = Join-Path $stagingDirectory "Assets"
-$packagePath = Join-Path $storeRoot "PulseRelay_${Version}_x64.msix"
+$packagePath = Join-Path $storeRoot "PulseRelay_${Version}_${packageArchitecture}.msix"
 $checksumPath = Join-Path $storeRoot "SHA256SUMS.txt"
 
 foreach ($requiredPath in @($manifestTemplate, $projectPath, $sourceLogo)) {
@@ -132,8 +138,11 @@ $packageIdentityName = Get-RequiredJsonValue -Json $identity -PropertyName "Pack
 $publisher = Get-RequiredJsonValue -Json $identity -PropertyName "Publisher"
 $publisherDisplayName = Get-RequiredJsonValue -Json $identity -PropertyName "PublisherDisplayName"
 
-if (Test-Path -LiteralPath $storeRoot) {
-    Remove-Item -LiteralPath $storeRoot -Recurse -Force
+if (Test-Path -LiteralPath $workDirectory) {
+    Remove-Item -LiteralPath $workDirectory -Recurse -Force
+}
+if (Test-Path -LiteralPath $packagePath) {
+    Remove-Item -LiteralPath $packagePath -Force
 }
 
 New-Item -ItemType Directory -Path $payloadDirectory, $stagingDirectory, $inspectDirectory, $assetsDirectory -Force |
@@ -186,6 +195,7 @@ if ($null -eq $identityNode -or $null -eq $publisherDisplayNameNode) {
 $identityNode.SetAttribute("Name", $packageIdentityName)
 $identityNode.SetAttribute("Publisher", $publisher)
 $identityNode.SetAttribute("Version", $Version)
+$identityNode.SetAttribute("ProcessorArchitecture", $packageArchitecture)
 $publisherDisplayNameNode.InnerText = $publisherDisplayName
 
 $manifestPath = Join-Path $stagingDirectory "AppxManifest.xml"
@@ -222,6 +232,9 @@ if ($inspectedManifest.Package.Identity.Publisher -ne $publisher) {
 }
 if ($inspectedManifest.Package.Identity.Version -ne $Version) {
     throw "Packed manifest version does not match '$Version'."
+}
+if ($inspectedManifest.Package.Identity.ProcessorArchitecture -ne $packageArchitecture) {
+    throw "Packed manifest architecture does not match '$packageArchitecture'."
 }
 
 $requiredPackageFiles = @(
@@ -270,7 +283,12 @@ if ($pathLeaks.Count -gt 0) {
 }
 
 $hash = Get-FileHash -LiteralPath $packagePath -Algorithm SHA256
-"$($hash.Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($packagePath))" |
+Get-ChildItem -LiteralPath $storeRoot -Filter "*.msix" -File |
+    Sort-Object -Property Name |
+    ForEach-Object {
+        $packageHash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+        "$($packageHash.Hash.ToLowerInvariant())  $($_.Name)"
+    } |
     Set-Content -LiteralPath $checksumPath -Encoding utf8
 
 Write-Host ""

@@ -80,12 +80,17 @@ jobs:
         shell: pwsh
         run: dotnet test PulseRelay.sln --configuration Release --no-build
 
-      - name: Build Store MSIX
+      - name: Build Store MSIX packages
         shell: pwsh
         run: |
-          .\scripts\build-store-msix.ps1 `
-            -IdentityFile "$env:STORE_IDENTITY_FILE" `
-            -Version "$env:MSIX_VERSION"
+          Remove-Item -LiteralPath .\artifacts\store -Recurse -Force -ErrorAction SilentlyContinue
+
+          foreach ($runtime in @("win-x64", "win-arm64")) {
+            .\scripts\build-store-msix.ps1 `
+              -IdentityFile "$env:STORE_IDENTITY_FILE" `
+              -Version "$env:MSIX_VERSION" `
+              -Runtime $runtime
+          }
 
       - name: Upload Store-ready package
         uses: actions/upload-artifact@v4

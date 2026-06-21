@@ -1,7 +1,8 @@
 # Microsoft Store MSIX
 
-The `Build Microsoft Store MSIX` GitHub Actions workflow builds an unsigned
-Store-ready MSIX and uploads it as a workflow artifact.
+The `Build Microsoft Store MSIX` GitHub Actions workflow builds unsigned
+x64 and ARM64 Store-ready MSIX packages and uploads them as a workflow
+artifact.
 
 ## Repository variables
 
@@ -28,11 +29,13 @@ publisher value.
 The artifact contains:
 
 - `PulseRelay_A.B.C.0_x64.msix`
+- `PulseRelay_A.B.C.0_arm64.msix`
 - `SHA256SUMS.txt`
 
-Upload the MSIX to the Packages section of the app submission in Partner
-Center. This package is intentionally unsigned; Microsoft signs Store packages
-after certification.
+Upload both MSIX packages to the Packages section of the same app submission
+in Partner Center. These packages are intentionally unsigned; Microsoft signs
+Store packages after certification and delivers the appropriate architecture
+to each device.
 
 ## Local Windows build
 
@@ -42,7 +45,13 @@ Create `.local/store-identity.json` from
 ```powershell
 pwsh .\scripts\build-store-msix.ps1 `
   -IdentityFile .\.local\store-identity.json `
-  -Version 1.0.0.0
+  -Version 1.0.0.0 `
+  -Runtime win-x64
+
+pwsh .\scripts\build-store-msix.ps1 `
+  -IdentityFile .\.local\store-identity.json `
+  -Version 1.0.0.0 `
+  -Runtime win-arm64
 ```
 
 The Windows SDK must be installed because the script uses `MakeAppx.exe`.
