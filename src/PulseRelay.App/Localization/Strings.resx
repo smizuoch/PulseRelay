@@ -57,6 +57,9 @@
   <data name="Error_OscConfig" xml:space="preserve">
     <value>OSC output couldn't start — check the host, port, and address in settings.</value>
   </data>
+  <data name="Error_ConnectionTimeout" xml:space="preserve">
+    <value>No Bluetooth connection for 30 minutes — stopped</value>
+  </data>
   <data name="Error_DeviceDisconnected" xml:space="preserve">
     <value>The device disconnected. Start sharing again, then reconnect.</value>
   </data>
@@ -208,6 +211,12 @@
   <data name="Settings_AppliesNextConnect" xml:space="preserve">
     <value>Source changes take effect the next time you connect.</value>
   </data>
+  <data name="Settings_HideToTrayOnClose" xml:space="preserve">
+    <value>Keep PulseRelay running in the tray when the main window is closed</value>
+  </data>
+  <data name="Settings_BehaviorSection" xml:space="preserve">
+    <value>APP BEHAVIOR</value>
+  </data>
   <data name="Settings_Save" xml:space="preserve">
     <value>Save</value>
   </data>
@@ -225,6 +234,9 @@
   </data>
   <data name="Settings_Error_OscApply" xml:space="preserve">
     <value>Couldn't apply the OSC settings — {0}</value>
+  </data>
+  <data name="Settings_Error_Save" xml:space="preserve">
+    <value>Couldn't save settings — {0}</value>
   </data>
 
   <data name="Diag_Title" xml:space="preserve">

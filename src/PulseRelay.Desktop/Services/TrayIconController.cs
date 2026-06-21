@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using PulseRelay.App;
 using PulseRelay.App.Localization;
 using PulseRelay.App.Settings;
@@ -14,7 +16,7 @@ namespace PulseRelay.Desktop.Services;
 /// re-localize in place, so the whole menu is rebuilt on language changes and on
 /// run-state/OSC flips. Start is idempotent in the supervisor, so the tray can never
 /// create a duplicate active source; Quit goes through the lifetime shutdown, which runs
-/// the existing App.OnExit cleanup (stop bridge, cancel retries, dispose source).
+/// the application's asynchronous cleanup (stop bridge, cancel retries, dispose source).
 /// </summary>
 public sealed class TrayIconController : IDisposable
 {
@@ -22,19 +24,26 @@ public sealed class TrayIconController : IDisposable
     private readonly BridgeSupervisor _supervisor;
     private readonly AppSettings _settings;
     private readonly SettingsStore _settingsStore;
+    private readonly Func<Task> _requestShutdown;
+    private readonly ILogger _logger;
     private readonly TrayIcon _trayIcon;
     private (bool IsRunning, bool OscOn) _menuState;
+    private bool _disposed;
 
     public TrayIconController(
         IClassicDesktopStyleApplicationLifetime desktop,
         BridgeSupervisor supervisor,
         AppSettings settings,
-        SettingsStore settingsStore)
+        SettingsStore settingsStore,
+        Func<Task> requestShutdown,
+        ILogger<TrayIconController>? logger = null)
     {
         _desktop = desktop;
         _supervisor = supervisor;
         _settings = settings;
         _settingsStore = settingsStore;
+        _requestShutdown = requestShutdown;
+        _logger = logger ?? NullLogger<TrayIconController>.Instance;
 
         _trayIcon = new TrayIcon
         {
@@ -51,6 +60,12 @@ public sealed class TrayIconController : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         LocalizationManager.LanguageChanged -= OnLanguageChanged;
         _supervisor.SnapshotChanged -= OnSnapshotChanged;
         // Explicit disposal: Windows otherwise leaves a ghost icon behind.
@@ -72,6 +87,11 @@ public sealed class TrayIconController : IDisposable
     private void OnSnapshotChanged(object? sender, SupervisorSnapshot snapshot) =>
         Dispatcher.UIThread.Post(() =>
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             if (_menuState != (_supervisor.IsRunning, EffectiveOscOn()))
             {
                 RebuildMenu();
@@ -91,13 +111,20 @@ public sealed class TrayIconController : IDisposable
             LocalizationManager.GetString(isRunning ? "Action_Stop" : "Action_Start"));
         startStop.Click += async (_, _) =>
         {
-            if (_supervisor.IsRunning)
+            try
             {
-                await _supervisor.StopAsync();
+                if (_supervisor.IsRunning)
+                {
+                    await _supervisor.StopAsync();
+                }
+                else
+                {
+                    _supervisor.Start(_settings);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _supervisor.Start(_settings);
+                _logger.LogError(ex, "Tray start/stop action failed");
             }
         };
 
@@ -106,7 +133,7 @@ public sealed class TrayIconController : IDisposable
         osc.Click += (_, _) => ToggleOsc();
 
         var quit = new NativeMenuItem(LocalizationManager.GetString("Tray_Quit"));
-        quit.Click += (_, _) => _desktop.Shutdown();
+        quit.Click += (_, _) => _ = _requestShutdown();
 
         _trayIcon.Menu = new NativeMenu
         {
@@ -141,8 +168,13 @@ public sealed class TrayIconController : IDisposable
             : snapshot.Session.OscStatus == OscOutputStatus.Off;
         if (_supervisor.TrySetOscEnabled(enable, _settings, out _))
         {
+            bool previous = _settings.OscEnabled;
             _settings.OscEnabled = enable;
-            _settingsStore.Save(_settings);
+            if (!_settingsStore.TrySave(_settings, out _))
+            {
+                _settings.OscEnabled = previous;
+                _supervisor.TrySetOscEnabled(previous, _settings, out _);
+            }
         }
     }
 }

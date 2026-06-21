@@ -29,6 +29,10 @@ public sealed class BridgeSupervisor : IAsyncDisposable
     private CancellationTokenSource? _delayCts;
     private TaskCompletionSource? _dropSignal;
     private bool _streamedThisConnection;
+    private bool _connectedThisRun;
+    private bool _stopping;
+    private Task? _stopTask;
+    private long _generation;
 
     public BridgeSupervisor(
         BridgeSession session,
@@ -56,6 +60,12 @@ public sealed class BridgeSupervisor : IAsyncDisposable
 
     public event EventHandler<SupervisorSnapshot>? SnapshotChanged;
 
+    /// <summary>
+    /// Raised after a BLE run that never established a connection has been stopped because
+    /// <see cref="BridgeSupervisorOptions.InitialConnectionTimeout"/> elapsed.
+    /// </summary>
+    public event EventHandler? InitialConnectionTimedOut;
+
     public bool SupportsBle => _session.SupportsBle;
 
     public TimeSpan StaleThreshold => _session.StaleThreshold;
@@ -66,7 +76,7 @@ public sealed class BridgeSupervisor : IAsyncDisposable
         {
             lock (_gate)
             {
-                return _loopCts is not null;
+                return _loopCts is not null && !_stopping;
             }
         }
     }
@@ -75,23 +85,38 @@ public sealed class BridgeSupervisor : IAsyncDisposable
     public void Start(AppSettings settings)
     {
         CancellationTokenSource cts;
+        long generation;
         lock (_gate)
         {
-            if (_loopCts is not null)
+            if (_loopCts is not null || _stopping)
             {
                 return;
             }
 
             cts = _loopCts = new CancellationTokenSource();
+            generation = ++_generation;
+            _connectedThisRun = false;
         }
 
         _logger.LogInformation("Bridge started by user");
         Update(s => SupervisorSnapshot.Initial with { Session = s.Session, RunState = BridgeRunState.Running });
 
-        var loop = RunAsync(settings, cts.Token);
+        var loop = RunAsync(settings, cts, generation);
+        bool active;
         lock (_gate)
         {
-            _loop = loop;
+            active = ReferenceEquals(_loopCts, cts);
+            if (active)
+            {
+                _loop = loop;
+            }
+        }
+
+        if (active
+            && settings.SourceKind == HeartRateSourceKind.Ble
+            && _options.InitialConnectionTimeout is { } timeout)
+        {
+            _ = MonitorInitialConnectionTimeoutAsync(generation, cts, timeout);
         }
     }
 
@@ -99,43 +124,103 @@ public sealed class BridgeSupervisor : IAsyncDisposable
     /// Declares the intent to stop: cancels any pending backoff, stops the source cleanly,
     /// and guarantees no further retries. Safe to call when not running.
     /// </summary>
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         CancellationTokenSource? cts;
         CancellationTokenSource? delay;
         Task? loop;
+        long generation;
+        TaskCompletionSource completion;
         lock (_gate)
         {
+            if (_stopTask is not null)
+            {
+                return _stopTask;
+            }
+
             cts = _loopCts;
+            if (cts is null)
+            {
+                return Task.CompletedTask;
+            }
+
             delay = _delayCts;
             loop = _loop;
-            _loopCts = null;
-            _delayCts = null;
-            _loop = null;
+            generation = _generation;
+            _stopping = true;
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _stopTask = completion.Task;
         }
 
-        if (cts is null)
+        _ = StopCoreAsync(cts, delay, loop, generation, completion);
+        return completion.Task;
+    }
+
+    private async Task StopCoreAsync(
+        CancellationTokenSource cts,
+        CancellationTokenSource? delay,
+        Task? loop,
+        long generation,
+        TaskCompletionSource completion)
+    {
+        Exception? failure = null;
+        try
         {
-            return;
-        }
+            cts.Cancel();
+            delay?.Cancel();
+            if (loop is not null)
+            {
+                try
+                {
+                    await loop.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
 
-        cts.Cancel();
-        delay?.Cancel();
-        if (loop is not null)
+            await _session.DisconnectAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
         {
-            try
+            failure = ex;
+            _logger.LogError(ex, "Error while stopping bridge");
+        }
+        finally
+        {
+            bool reset;
+            lock (_gate)
             {
-                await loop;
+                reset = generation == _generation && ReferenceEquals(_loopCts, cts);
+                if (reset)
+                {
+                    _loopCts = null;
+                    _delayCts = null;
+                    _loop = null;
+                    _dropSignal = null;
+                    _connectedThisRun = false;
+                    _stopping = false;
+                    _stopTask = null;
+                }
             }
-            catch (OperationCanceledException)
+
+            if (reset)
             {
+                Update(_ => SupervisorSnapshot.Initial);
             }
+
+            cts.Dispose();
+            _logger.LogInformation("Bridge stopped by user");
         }
 
-        await _session.DisconnectAsync();
-        Update(_ => SupervisorSnapshot.Initial);
-        cts.Dispose();
-        _logger.LogInformation("Bridge stopped by user");
+        if (failure is null)
+        {
+            completion.TrySetResult();
+        }
+        else
+        {
+            completion.TrySetException(failure);
+        }
     }
 
     /// <summary>
@@ -162,12 +247,13 @@ public sealed class BridgeSupervisor : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await StopAsync();
+        await StopAsync().ConfigureAwait(false);
         _session.SnapshotChanged -= OnSessionSnapshotChanged;
     }
 
-    private async Task RunAsync(AppSettings settings, CancellationToken ct)
+    private async Task RunAsync(AppSettings settings, CancellationTokenSource ownerCts, long generation)
     {
+        var ct = ownerCts.Token;
         int failedAttempts = 0;
         try
         {
@@ -175,7 +261,7 @@ public sealed class BridgeSupervisor : IAsyncDisposable
             {
                 // Clean slate: tears down any previous source so every attempt gets a fresh
                 // one from the factory (BLE addresses are session-scoped RPAs, never reused).
-                await _session.DisconnectAsync();
+                await _session.DisconnectAsync().ConfigureAwait(false);
                 ct.ThrowIfCancellationRequested();
 
                 var drop = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -185,13 +271,18 @@ public sealed class BridgeSupervisor : IAsyncDisposable
                     _streamedThisConnection = false;
                 }
 
-                bool connected = await _session.ConnectAsync(settings, ct);
+                bool connected = await _session.ConnectAsync(settings, ct).ConfigureAwait(false);
                 ct.ThrowIfCancellationRequested();
 
                 if (connected)
                 {
-                    Update(s => s with { RunState = BridgeRunState.Running, NextRetryAt = null });
-                    await WaitForDropAsync(drop, ct);
+                    Update(s => s with
+                    {
+                        RunState = BridgeRunState.Running,
+                        RetryAttempt = 0,
+                        NextRetryAt = null,
+                    });
+                    await WaitForDropAsync(drop, ct).ConfigureAwait(false);
 
                     bool streamed;
                     lock (_gate)
@@ -222,7 +313,7 @@ public sealed class BridgeSupervisor : IAsyncDisposable
                     NextRetryAt = nextAt,
                 });
 
-                bool skipped = await AwaitDelayAsync(delayTask, delayCts, ct);
+                bool skipped = await AwaitDelayAsync(delayTask, delayCts, ct).ConfigureAwait(false);
                 if (skipped)
                 {
                     failedAttempts = 0;
@@ -238,6 +329,15 @@ public sealed class BridgeSupervisor : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Supervision loop crashed; bridge halted");
+            try
+            {
+                await _session.DisconnectAsync().ConfigureAwait(false);
+            }
+            catch (Exception cleanupEx)
+            {
+                _logger.LogWarning(cleanupEx, "Cleanup after supervision loop failure also failed");
+            }
+
             Update(s => s with
             {
                 RunState = BridgeRunState.Stopped,
@@ -249,14 +349,48 @@ public sealed class BridgeSupervisor : IAsyncDisposable
                 },
             });
         }
+        finally
+        {
+            bool clear;
+            lock (_gate)
+            {
+                clear = !_stopping
+                    && generation == _generation
+                    && ReferenceEquals(_loopCts, ownerCts);
+                if (clear)
+                {
+                    _loopCts = null;
+                    _delayCts = null;
+                    _loop = null;
+                    _dropSignal = null;
+                }
+            }
+
+            if (clear)
+            {
+                ownerCts.Cancel();
+                ownerCts.Dispose();
+            }
+        }
     }
 
     private async Task WaitForDropAsync(TaskCompletionSource drop, CancellationToken ct)
     {
+        var connectedAt = _timeProvider.GetUtcNow();
         using var watchdog = _timeProvider.CreateTimer(
             _ =>
             {
                 var session = _session.Snapshot;
+                if (session.Status == BridgeStatus.WaitingForData
+                    && _timeProvider.GetUtcNow() - connectedAt > _options.FirstSampleTimeout)
+                {
+                    _logger.LogWarning(
+                        "No first sample within {Seconds}s after subscription - forcing reconnect",
+                        _options.FirstSampleTimeout.TotalSeconds);
+                    drop.TrySetResult();
+                    return;
+                }
+
                 if (session.Status == BridgeStatus.Streaming
                     && session.LastSampleAt is { } last
                     && _timeProvider.GetUtcNow() - last > _options.StaleReconnectThreshold)
@@ -271,7 +405,7 @@ public sealed class BridgeSupervisor : IAsyncDisposable
             _options.WatchdogInterval,
             _options.WatchdogInterval);
 
-        await drop.Task.WaitAsync(ct);
+        await drop.Task.WaitAsync(ct).ConfigureAwait(false);
     }
 
     private (Task Delay, CancellationTokenSource Cts) BeginDelay(TimeSpan delay, CancellationToken ct)
@@ -290,7 +424,7 @@ public sealed class BridgeSupervisor : IAsyncDisposable
     {
         try
         {
-            await delayTask;
+            await delayTask.ConfigureAwait(false);
             return false;
         }
         catch (OperationCanceledException)
@@ -319,6 +453,11 @@ public sealed class BridgeSupervisor : IAsyncDisposable
         lock (_gate)
         {
             bool streaming = session.Status == BridgeStatus.Streaming;
+            if (session.Status is BridgeStatus.WaitingForData or BridgeStatus.Streaming)
+            {
+                _connectedThisRun = true;
+            }
+
             if (streaming)
             {
                 _streamedThisConnection = true;
@@ -339,6 +478,58 @@ public sealed class BridgeSupervisor : IAsyncDisposable
 
         SnapshotChanged?.Invoke(this, updated);
         drop?.TrySetResult();
+    }
+
+    private async Task MonitorInitialConnectionTimeoutAsync(
+        long generation,
+        CancellationTokenSource ownerCts,
+        TimeSpan timeout)
+    {
+        try
+        {
+            await Task.Delay(timeout, _timeProvider, ownerCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        lock (_gate)
+        {
+            if (generation != _generation
+                || !ReferenceEquals(_loopCts, ownerCts)
+                || _stopping
+                || _connectedThisRun)
+            {
+                return;
+            }
+
+            // Claim the stop before releasing the lock so a connection arriving at the
+            // deadline cannot race between the final check and StopAsync.
+            _stopping = true;
+        }
+
+        _logger.LogWarning(
+            "No BLE connection was established within {Minutes} minutes; stopping bridge",
+            timeout.TotalMinutes);
+        await StopAsync().ConfigureAwait(false);
+        Update(_ => SupervisorSnapshot.Initial with
+        {
+            Session = BridgeSnapshot.Initial with
+            {
+                Status = BridgeStatus.Failed,
+                FailureKind = BridgeFailureKind.ConnectionTimeout,
+                LastError = $"No BLE connection was established within {timeout.TotalMinutes:0} minutes.",
+            },
+        });
+        try
+        {
+            InitialConnectionTimedOut?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Initial connection timeout observer failed");
+        }
     }
 
     private void Update(Func<SupervisorSnapshot, SupervisorSnapshot> transform)

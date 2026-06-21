@@ -40,6 +40,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _deviceNameFilter;
 
     [ObservableProperty]
+    private bool _hideToTrayOnClose;
+
+    [ObservableProperty]
     private string? _errorText;
 
     public SettingsViewModel(BridgeSupervisor supervisor, AppSettings settings, SettingsStore store)
@@ -61,6 +64,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _oscAddress = settings.OscAddress;
         _isBleSource = settings.SourceKind == HeartRateSourceKind.Ble;
         _deviceNameFilter = settings.DeviceNameFilter ?? "";
+        _hideToTrayOnClose = settings.HideToTrayOnClose;
     }
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; }
@@ -100,7 +104,15 @@ public sealed partial class SettingsViewModel : ObservableObject
             || _settings.OscAddress != address;
         bool languageChanged = _settings.Language != SelectedLanguage.Value;
 
-        var previous = (_settings.OscEnabled, _settings.OscHost, _settings.OscPort, _settings.OscAddress);
+        var previous = (
+            _settings.OscEnabled,
+            _settings.OscHost,
+            _settings.OscPort,
+            _settings.OscAddress,
+            _settings.SourceKind,
+            _settings.DeviceNameFilter,
+            _settings.Language,
+            _settings.HideToTrayOnClose);
         _settings.OscEnabled = OscEnabled;
         _settings.OscHost = host;
         _settings.OscPort = port;
@@ -110,7 +122,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         // endpoint immediately; on failure roll the shared instance back and stay open.
         if (oscChanged && !_supervisor.TrySetOscEnabled(OscEnabled, _settings, out string? error))
         {
-            (_settings.OscEnabled, _settings.OscHost, _settings.OscPort, _settings.OscAddress) = previous;
+            (_settings.OscEnabled, _settings.OscHost, _settings.OscPort, _settings.OscAddress) =
+                (previous.OscEnabled, previous.OscHost, previous.OscPort, previous.OscAddress);
             ErrorText = LocalizationManager.Format("Settings_Error_OscApply", error ?? "");
             return;
         }
@@ -119,8 +132,27 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.DeviceNameFilter =
             string.IsNullOrWhiteSpace(DeviceNameFilter) ? null : DeviceNameFilter.Trim();
         _settings.Language = SelectedLanguage.Value;
+        _settings.HideToTrayOnClose = HideToTrayOnClose;
 
-        _store.Save(_settings);
+        if (!_store.TrySave(_settings, out string? saveError))
+        {
+            (
+                _settings.OscEnabled,
+                _settings.OscHost,
+                _settings.OscPort,
+                _settings.OscAddress,
+                _settings.SourceKind,
+                _settings.DeviceNameFilter,
+                _settings.Language,
+                _settings.HideToTrayOnClose) = previous;
+            if (oscChanged)
+            {
+                _supervisor.TrySetOscEnabled(previous.OscEnabled, _settings, out _);
+            }
+
+            ErrorText = LocalizationManager.Format("Settings_Error_Save", saveError ?? "");
+            return;
+        }
         if (languageChanged)
         {
             LocalizationManager.Apply(_settings.Language);

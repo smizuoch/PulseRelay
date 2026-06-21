@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text;
+using PulseRelay.Osc;
 
 namespace PulseRelay.App.Settings;
 
@@ -17,7 +19,44 @@ public static class SettingsValidation
         && port is >= MinPort and <= MaxPort;
 
     public static bool IsValidOscAddress(string? address) =>
-        !string.IsNullOrWhiteSpace(address) && address.StartsWith('/');
+        !string.IsNullOrWhiteSpace(address) && address.StartsWith('/') && Ascii.IsValid(address);
 
     public static bool IsValidHost(string? host) => !string.IsNullOrWhiteSpace(host);
+
+    public static AppSettings Normalize(AppSettings settings)
+    {
+        var defaults = new AppSettings();
+        if (!Enum.IsDefined(settings.SourceKind))
+        {
+            settings.SourceKind = defaults.SourceKind;
+        }
+
+        if (settings.ScanTimeoutSeconds is <= 0 or > 3600)
+        {
+            settings.ScanTimeoutSeconds = defaults.ScanTimeoutSeconds;
+        }
+
+        settings.OscHost = IsValidHost(settings.OscHost)
+            ? settings.OscHost.Trim()
+            : defaults.OscHost;
+        if (settings.OscPort is < MinPort or > MaxPort)
+        {
+            settings.OscPort = defaults.OscPort;
+        }
+
+        settings.OscAddress = IsValidOscAddress(settings.OscAddress)
+            ? settings.OscAddress.Trim()
+            : defaults.OscAddress;
+        if (!Enum.IsDefined(settings.Theme))
+        {
+            settings.Theme = defaults.Theme;
+        }
+
+        if (!Enum.IsDefined(settings.Language))
+        {
+            settings.Language = defaults.Language;
+        }
+
+        return settings;
+    }
 }

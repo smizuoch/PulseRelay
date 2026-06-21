@@ -46,7 +46,7 @@ public sealed class SettingsStore
                 return new AppSettings();
             }
 
-            return settings;
+            return SettingsValidation.Normalize(settings);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -65,5 +65,21 @@ public sealed class SettingsStore
         File.WriteAllText(temp, JsonSerializer.Serialize(settings, JsonOptions));
         File.Move(temp, FilePath, overwrite: true);
         _logger.LogDebug("Settings saved to {Path}", FilePath);
+    }
+
+    public bool TrySave(AppSettings settings, out string? error)
+    {
+        try
+        {
+            Save(settings);
+            error = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Failed to save settings to {Path}", FilePath);
+            error = ex.Message;
+            return false;
+        }
     }
 }

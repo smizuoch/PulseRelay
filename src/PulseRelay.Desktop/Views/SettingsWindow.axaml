@@ -64,6 +64,15 @@
       </StackPanel>
     </Border>
 
+    <!-- App behavior -->
+    <Border Classes="card">
+      <StackPanel Spacing="8">
+        <TextBlock Classes="cardtitle" Text="{loc:Loc Settings_BehaviorSection}" />
+        <CheckBox IsChecked="{Binding HideToTrayOnClose}"
+                  Content="{loc:Loc Settings_HideToTrayOnClose}" />
+      </StackPanel>
+    </Border>
+
     <TextBlock Foreground="{StaticResource StatusFailBrush}" TextWrapping="Wrap"
                Text="{Binding ErrorText}"
                IsVisible="{Binding ErrorText, Converter={x:Static ObjectConverters.IsNotNull}}" />

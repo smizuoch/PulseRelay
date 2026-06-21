@@ -167,6 +167,55 @@ public class BridgeSessionTests
     }
 
     [Fact]
+    public async Task Disconnect_disposes_source_even_when_stop_throws()
+    {
+        var factory = new FakeSourceFactory
+        {
+            Configure = source => source.StopFailure = new IOException("stop failed"),
+        };
+        await using var session = new BridgeSession(factory, NullLoggerFactory.Instance);
+
+        Assert.True(await session.ConnectAsync(MockSettings(), CancellationToken.None));
+        await session.DisconnectAsync();
+
+        Assert.Equal(1, factory.Latest.StopCalls);
+        Assert.Equal(1, factory.Latest.DisposeCalls);
+        Assert.Equal(BridgeSnapshot.Initial, session.Snapshot);
+    }
+
+    [Fact]
+    public async Task Late_events_from_disconnected_source_do_not_change_new_session()
+    {
+        var factory = new FakeSourceFactory();
+        await using var session = new BridgeSession(factory, NullLoggerFactory.Instance);
+
+        Assert.True(await session.ConnectAsync(MockSettings(), CancellationToken.None));
+        var oldSource = factory.Latest;
+        await session.DisconnectAsync();
+        Assert.True(await session.ConnectAsync(MockSettings(), CancellationToken.None));
+
+        oldSource.EmitSample(199, DateTimeOffset.UtcNow);
+
+        Assert.Null(session.Snapshot.Bpm);
+        Assert.Equal(BridgeStatus.WaitingForData, session.Snapshot.Status);
+    }
+
+    [Fact]
+    public async Task Osc_observer_exception_does_not_escape_sample_delivery()
+    {
+        var source = new FakeHeartRateSource();
+        using var publisher = new PulseRelay.Osc.HeartRateOscPublisher(port: 9202);
+        publisher.SendCompleted += (_, _) => throw new InvalidOperationException("observer failed");
+        publisher.Attach(source);
+        await source.StartAsync(CancellationToken.None);
+
+        var exception = Record.Exception(
+            () => source.EmitSample(80, DateTimeOffset.UtcNow));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public void Streaming_goes_stale_after_threshold()
     {
         var now = DateTimeOffset.UtcNow;

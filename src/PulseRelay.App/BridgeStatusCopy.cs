@@ -86,6 +86,7 @@ public static class BridgeStatusCopy
         BridgeFailureKind.BluetoothUnavailable => LocalizationManager.GetString("Error_BluetoothUnavailable"),
         BridgeFailureKind.PlatformUnsupported => LocalizationManager.GetString("Error_PlatformUnsupported"),
         BridgeFailureKind.OscConfig => LocalizationManager.GetString("Error_OscConfig"),
+        BridgeFailureKind.ConnectionTimeout => LocalizationManager.GetString("Error_ConnectionTimeout"),
         _ => snapshot.LastError ?? LocalizationManager.GetString("Status_Failed"),
     };
 

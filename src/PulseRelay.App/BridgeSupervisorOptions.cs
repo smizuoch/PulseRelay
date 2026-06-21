@@ -4,6 +4,19 @@ namespace PulseRelay.App;
 public sealed class BridgeSupervisorOptions
 {
     /// <summary>
+    /// Maximum time a BLE run may remain without ever establishing a subscribed connection.
+    /// Once a connection is established this limit is permanently disabled for that run,
+    /// including later reconnects. Null disables the limit.
+    /// </summary>
+    public TimeSpan? InitialConnectionTimeout { get; init; } = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Maximum time to wait for the first sample after a source reports that subscription
+    /// setup completed. A timeout forces a fresh connection attempt.
+    /// </summary>
+    public TimeSpan FirstSampleTimeout { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
     /// Delays between reconnect attempts. The last entry repeats indefinitely while the user
     /// intends the bridge to run; Stop always cancels.
     /// </summary>

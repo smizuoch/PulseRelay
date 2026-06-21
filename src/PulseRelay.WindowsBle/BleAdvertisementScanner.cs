@@ -50,6 +50,8 @@ public sealed class BleAdvertisementScanner : IDisposable
     /// <summary>Raised for each advertisement (deduplicated per address unless logRepeats is set).</summary>
     public event EventHandler<BleAdvertisementReport>? AdvertisementReceived;
 
+    private event EventHandler<BluetoothError>? WatcherStopped;
+
     public void Start()
     {
         _logger.LogInformation(
@@ -78,6 +80,8 @@ public sealed class BleAdvertisementScanner : IDisposable
     {
         var found = new TaskCompletionSource<BleAdvertisementReport>(
             TaskCreationOptions.RunContinuationsAsynchronously);
+        var stopped = new TaskCompletionSource<BluetoothError>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
         void Handler(object? sender, BleAdvertisementReport report)
         {
@@ -87,19 +91,33 @@ public sealed class BleAdvertisementScanner : IDisposable
             }
         }
 
+        void StoppedHandler(object? sender, BluetoothError error) => stopped.TrySetResult(error);
+
         AdvertisementReceived += Handler;
+        WatcherStopped += StoppedHandler;
         try
         {
             Start();
-            return await found.Task.WaitAsync(timeout, cancellationToken);
-        }
-        catch (TimeoutException)
-        {
+            var timeoutTask = Task.Delay(timeout, cancellationToken);
+            var completed = await Task.WhenAny(found.Task, stopped.Task, timeoutTask).ConfigureAwait(false);
+            if (completed == found.Task)
+            {
+                return await found.Task.ConfigureAwait(false);
+            }
+
+            if (completed == stopped.Task)
+            {
+                var error = await stopped.Task.ConfigureAwait(false);
+                throw new InvalidOperationException($"BLE advertisement watcher stopped unexpectedly: {error}.");
+            }
+
+            await timeoutTask.ConfigureAwait(false);
             return null;
         }
         finally
         {
             AdvertisementReceived -= Handler;
+            WatcherStopped -= StoppedHandler;
             Stop();
         }
     }
@@ -152,6 +170,7 @@ public sealed class BleAdvertisementScanner : IDisposable
 
     private void OnStopped(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementWatcherStoppedEventArgs args)
     {
+        WatcherStopped?.Invoke(this, args.Error);
         if (args.Error == BluetoothError.Success)
         {
             _logger.LogInformation("BLE advertisement watcher stopped (no error)");

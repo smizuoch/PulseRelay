@@ -57,6 +57,9 @@
   <data name="Error_OscConfig" xml:space="preserve">
     <value>OSC 出力を開始できませんでした — 設定のホスト・ポート・アドレスを確認してください。</value>
   </data>
+  <data name="Error_ConnectionTimeout" xml:space="preserve">
+    <value>Bluetooth接続が30分なかったため停止しました</value>
+  </data>
   <data name="Error_DeviceDisconnected" xml:space="preserve">
     <value>デバイスとの接続が切れました。もう一度共有を開始してから、再接続してください。</value>
   </data>
@@ -208,6 +211,12 @@
   <data name="Settings_AppliesNextConnect" xml:space="preserve">
     <value>ソースの変更は次回の接続時に反映されます。</value>
   </data>
+  <data name="Settings_HideToTrayOnClose" xml:space="preserve">
+    <value>メインウィンドウを閉じてもトレイで動作を続ける</value>
+  </data>
+  <data name="Settings_BehaviorSection" xml:space="preserve">
+    <value>アプリの動作</value>
+  </data>
   <data name="Settings_Save" xml:space="preserve">
     <value>保存</value>
   </data>
@@ -225,6 +234,9 @@
   </data>
   <data name="Settings_Error_OscApply" xml:space="preserve">
     <value>OSC設定を適用できませんでした — {0}</value>
+  </data>
+  <data name="Settings_Error_Save" xml:space="preserve">
+    <value>設定を保存できませんでした — {0}</value>
   </data>
 
   <data name="Diag_Title" xml:space="preserve">

@@ -186,6 +186,18 @@ public sealed class ProbeOptions
             }
         }
 
+        if (oscPort > ushort.MaxValue)
+        {
+            error = $"Option --osc-port must be between 1 and {ushort.MaxValue}, got \"{oscPort}\".";
+            return false;
+        }
+
+        if (!OscWriterAddressIsValid(oscAddress))
+        {
+            error = $"Option --osc-address must be an ASCII OSC address beginning with '/', got \"{oscAddress}\".";
+            return false;
+        }
+
         options = new ProbeOptions
         {
             Command = command,
@@ -200,6 +212,19 @@ public sealed class ProbeOptions
             IntervalMs = intervalMs,
         };
         return true;
+    }
+
+    private static bool OscWriterAddressIsValid(string address)
+    {
+        try
+        {
+            _ = OscWriter.WriteMessage(address, 0);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     private static bool TryTakeValue(string[] args, ref int i, string name, ref string error, out string? value)

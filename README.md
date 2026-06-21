@@ -70,6 +70,15 @@ See [docs/vrchat-osc.md](docs/vrchat-osc.md).
   and Start again.
 - **No data after ~10 s** — the dashboard flags stale data and reconnects automatically
   after 30 s of silence. First readings can take ~20 s on some trackers; that is normal.
+  If no first measurement arrives for 60 seconds after connecting, PulseRelay creates a
+  fresh connection.
+- **Started without enabling sharing** — if no BLE connection is established for 30
+  continuous minutes, PulseRelay stops the bridge to avoid scanning indefinitely. The app
+  and tray stay open so you can enable sharing and press Start again. Once a connection has
+  been established, this 30-minute limit is disabled; active streaming has no time limit.
+- **Closing the main window** — by default the window hides to the tray and the bridge
+  keeps running. This can be disabled in Settings. Use Quit in the tray menu for an orderly
+  shutdown.
 
 ## Layout
 

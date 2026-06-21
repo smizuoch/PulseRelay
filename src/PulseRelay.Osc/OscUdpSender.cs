@@ -15,8 +15,17 @@ public sealed class OscUdpSender : IDisposable
 
         Host = host;
         Port = port;
-        _client = new UdpClient();
-        _client.Connect(host, port);
+        var client = new UdpClient();
+        try
+        {
+            client.Connect(host, port);
+            _client = client;
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
     }
 
     public string Host { get; }

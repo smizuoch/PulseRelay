@@ -108,7 +108,7 @@ public sealed class BridgeSession : IAsyncDisposable
         if (settings.OscEnabled && !TryAttachPublisher(source, settings))
         {
             string? oscError = Snapshot.OscError;
-            await CleanupAsync();
+            await CleanupAsync().ConfigureAwait(false);
             Update(s => s with
             {
                 Status = BridgeStatus.Failed,
@@ -129,7 +129,7 @@ public sealed class BridgeSession : IAsyncDisposable
 
         try
         {
-            await source.StartAsync(cancellationToken);
+            await source.StartAsync(cancellationToken).ConfigureAwait(false);
             // A BLE source only learns the device name during StartAsync (scan + GATT read),
             // so the description captured above may still hold a placeholder. Re-publish it.
             Update(s => s with { SourceDescription = source.Description });
@@ -139,7 +139,7 @@ public sealed class BridgeSession : IAsyncDisposable
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Connect canceled");
-            await CleanupAsync();
+            await CleanupAsync().ConfigureAwait(false);
             return false;
         }
         catch (Exception ex)
@@ -149,7 +149,7 @@ public sealed class BridgeSession : IAsyncDisposable
             // BleHeartRateSource throws TimeoutException when no device advertises within
             // the scan window; a radio that is off typically surfaces the same way.
             var kind = ex is TimeoutException ? BridgeFailureKind.DeviceNotFound : BridgeFailureKind.Unknown;
-            await CleanupAsync();
+            await CleanupAsync().ConfigureAwait(false);
             Update(s => s with { Status = BridgeStatus.Failed, LastError = message, FailureKind = kind });
             return false;
         }
@@ -158,7 +158,7 @@ public sealed class BridgeSession : IAsyncDisposable
     /// <summary>Stops streaming and resets the snapshot to NotConnected. Safe to call when idle.</summary>
     public async Task DisconnectAsync()
     {
-        await CleanupAsync();
+        await CleanupAsync().ConfigureAwait(false);
         _logger.LogInformation("Bridge disconnected");
     }
 
@@ -173,12 +173,14 @@ public sealed class BridgeSession : IAsyncDisposable
 
         if (!enabled)
         {
+            HeartRateOscPublisher? publisher;
             lock (_gate)
             {
-                _publisher?.Dispose();
+                publisher = _publisher;
                 _publisher = null;
             }
 
+            publisher?.Dispose();
             Update(s => s with { OscStatus = OscOutputStatus.Off, OscError = null });
             return true;
         }
@@ -199,29 +201,53 @@ public sealed class BridgeSession : IAsyncDisposable
         return true;
     }
 
-    public async ValueTask DisposeAsync() => await CleanupAsync();
+    public async ValueTask DisposeAsync() => await CleanupAsync().ConfigureAwait(false);
 
     private bool TryAttachPublisher(IHeartRateSource source, AppSettings settings)
     {
+        HeartRateOscPublisher? publisher = null;
         try
         {
-            var publisher = new HeartRateOscPublisher(
+            publisher = new HeartRateOscPublisher(
                 settings.OscHost,
                 settings.OscPort,
                 settings.OscAddress,
                 _loggerFactory.CreateLogger<HeartRateOscPublisher>());
             publisher.SendCompleted += OnOscSendCompleted;
             publisher.Attach(source);
+            HeartRateOscPublisher? previous;
+            bool sourceChanged;
             lock (_gate)
             {
-                _publisher?.Dispose();
-                _publisher = publisher;
+                sourceChanged = !ReferenceEquals(_source, source);
+                if (sourceChanged)
+                {
+                    previous = null;
+                }
+                else
+                {
+                    previous = _publisher;
+                    _publisher = publisher;
+                }
             }
 
+            if (sourceChanged)
+            {
+                publisher.Dispose();
+                Update(s => s with
+                {
+                    OscStatus = OscOutputStatus.Error,
+                    OscError = "The heart-rate source changed while OSC output was being enabled.",
+                });
+                return false;
+            }
+
+            previous?.Dispose();
             return true;
         }
         catch (Exception ex) when (ex is ArgumentException or System.Net.Sockets.SocketException)
         {
+            publisher?.Dispose();
             _logger.LogError(ex, "Cannot enable OSC output");
             Update(s => s with { OscStatus = OscOutputStatus.Error, OscError = ex.Message });
             return false;
@@ -254,27 +280,48 @@ public sealed class BridgeSession : IAsyncDisposable
         {
             try
             {
-                await source.StopAsync();
-                await source.DisposeAsync();
+                await source.StopAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error while stopping source");
+            }
+
+            try
+            {
+                await source.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error while disposing source");
             }
         }
 
         Update(_ => BridgeSnapshot.Initial);
     }
 
-    private void OnStateChanged(object? sender, HeartRateSourceState state) =>
+    private void OnStateChanged(object? sender, HeartRateSourceState state)
+    {
+        if (!IsCurrentSource(sender))
+        {
+            return;
+        }
+
         Update(s => s with
         {
             Status = Map(state),
             // Keep the name current while StartAsync is still running (scan -> connect).
             SourceDescription = (sender as IHeartRateSource)?.Description ?? s.SourceDescription,
         });
+    }
 
-    private void OnSampleReceived(object? sender, HeartRateSample sample) =>
+    private void OnSampleReceived(object? sender, HeartRateSample sample)
+    {
+        if (!IsCurrentSource(sender))
+        {
+            return;
+        }
+
         Update(s => s with
         {
             Bpm = sample.Bpm,
@@ -282,11 +329,30 @@ public sealed class BridgeSession : IAsyncDisposable
             LastSampleAt = sample.Timestamp,
             SampleCount = s.SampleCount + 1,
         });
+    }
 
-    private void OnOscSendCompleted(object? sender, OscSendResult result) =>
+    private void OnOscSendCompleted(object? sender, OscSendResult result)
+    {
+        lock (_gate)
+        {
+            if (!ReferenceEquals(sender, _publisher))
+            {
+                return;
+            }
+        }
+
         Update(s => result.Success
             ? s with { OscStatus = OscOutputStatus.On, OscError = null, OscSentCount = s.OscSentCount + 1 }
             : s with { OscStatus = OscOutputStatus.Error, OscError = result.Error, OscErrorCount = s.OscErrorCount + 1 });
+    }
+
+    private bool IsCurrentSource(object? sender)
+    {
+        lock (_gate)
+        {
+            return ReferenceEquals(sender, _source);
+        }
+    }
 
     private void Update(Func<BridgeSnapshot, BridgeSnapshot> transform)
     {

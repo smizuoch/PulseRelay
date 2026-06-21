@@ -46,6 +46,10 @@ public class SettingsValidationTests
     public void Rejects_invalid_osc_addresses(string? address) =>
         Assert.False(SettingsValidation.IsValidOscAddress(address));
 
+    [Fact]
+    public void Rejects_non_ascii_osc_address() =>
+        Assert.False(SettingsValidation.IsValidOscAddress("/心拍"));
+
     [Theory]
     [InlineData("127.0.0.1", true)]
     [InlineData("localhost", true)]

@@ -64,5 +64,8 @@ public enum BridgeFailureKind
     /// <summary>OSC output could not be configured (bad address or socket).</summary>
     OscConfig,
 
+    /// <summary>No BLE connection was established within the run's initial time limit.</summary>
+    ConnectionTimeout,
+
     Unknown,
 }

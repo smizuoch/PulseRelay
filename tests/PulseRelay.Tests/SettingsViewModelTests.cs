@@ -127,4 +127,16 @@ public class SettingsViewModelTests : IDisposable
         Assert.Equal(9000, settings.OscPort);
         Assert.False(File.Exists(store.FilePath));
     }
+
+    [Fact]
+    public void Hide_to_tray_choice_is_saved()
+    {
+        var (viewModel, settings, store) = CreateViewModel();
+
+        viewModel.HideToTrayOnClose = false;
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.False(settings.HideToTrayOnClose);
+        Assert.False(store.Load().HideToTrayOnClose);
+    }
 }

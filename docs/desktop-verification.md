@@ -27,6 +27,10 @@ bridge alive:
   attempt reaches Streaming, or on manual Reconnect.
 - Stop cancels any pending retry and stops the source cleanly; nothing auto-retries after
   an explicit Stop.
+- If a BLE run never establishes a connection, it stops after 30 minutes. The desktop app
+  remains open and can be started again. Establishing a connection permanently disables
+  this limit for that run; streaming and later reconnects remain unlimited.
+- A connection that subscribes but produces no first sample for 60 seconds is recycled.
 - Staleness: the UI shows "No data for Ns" after 10 s of silence (display only) and the
   watchdog forces a reconnect after 30 s. Neither applies before the first sample — the
   Charge 6 has been observed to deliver its first notification ~19 s after subscription.
@@ -70,3 +74,7 @@ sources + `FakeTimeProvider`); the manual checklist below covers the real-hardwa
    "Copy diagnostics" output contains no `AA:BB:CC:DD:EE:FF`-style addresses.
 9. Tray icon: Show/Start/Stop/OSC toggle/Quit work in both languages; Quit exits cleanly
    with no ghost tray icon and no lingering process.
+10. Close the main window with "hide to tray" enabled → bridge keeps running and Show
+    restores the same window. Disable it → close performs cleanup and exits.
+11. Start with sharing disabled and observe 30 minutes → bridge stops but the app and tray
+    remain available. A run that has connected/streamed is not stopped by this limit.

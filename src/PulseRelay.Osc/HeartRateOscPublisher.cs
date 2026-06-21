@@ -26,12 +26,11 @@ public sealed class HeartRateOscPublisher : IDisposable
         string address = DefaultAddress,
         ILogger<HeartRateOscPublisher>? logger = null)
     {
+        // Validate the address eagerly so a bad CLI value fails at startup, not per sample.
+        _ = OscWriter.WriteMessage(address, 0);
         _sender = new OscUdpSender(host, port);
         _address = address;
         _logger = logger ?? NullLogger<HeartRateOscPublisher>.Instance;
-
-        // Validate the address eagerly so a bad CLI value fails at startup, not per sample.
-        _ = OscWriter.WriteMessage(address, 0);
     }
 
     /// <summary>
@@ -66,16 +65,26 @@ public sealed class HeartRateOscPublisher : IDisposable
 
     private void OnSampleReceived(object? sender, HeartRateSample sample)
     {
+        OscSendResult result;
         try
         {
             _sender.Send(OscWriter.WriteMessage(_address, sample.Bpm));
             _logger.LogDebug("OSC sent {Address} = {Bpm}", _address, sample.Bpm);
-            SendCompleted?.Invoke(this, new OscSendResult(sample.Bpm, Error: null));
+            result = new OscSendResult(sample.Bpm, Error: null);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send OSC message to {Host}:{Port}", _sender.Host, _sender.Port);
-            SendCompleted?.Invoke(this, new OscSendResult(sample.Bpm, ex.Message));
+            result = new OscSendResult(sample.Bpm, ex.Message);
+        }
+
+        try
+        {
+            SendCompleted?.Invoke(this, result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "OSC send observer failed");
         }
     }
 }

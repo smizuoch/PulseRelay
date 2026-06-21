@@ -5,7 +5,7 @@ using PulseRelay.App.Settings;
 
 namespace PulseRelay.Desktop.ViewModels;
 
-public sealed class MainWindowViewModel : ObservableObject
+public sealed class MainWindowViewModel : ObservableObject, IDisposable
 {
     public MainWindowViewModel(
         BridgeSupervisor supervisor,
@@ -17,4 +17,6 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public DashboardViewModel Dashboard { get; }
+
+    public void Dispose() => Dashboard.Dispose();
 }

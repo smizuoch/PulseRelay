@@ -121,4 +121,26 @@ public class SettingsStoreTests : IDisposable
         Assert.DoesNotContain("Address\":", json.Replace("OscAddress", ""), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Mac", json, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Invalid_persisted_values_are_replaced_with_safe_defaults()
+    {
+        var store = new SettingsStore(_directory);
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(store.FilePath, """
+            {
+              "ScanTimeoutSeconds": -1,
+              "OscHost": " ",
+              "OscPort": 70000,
+              "OscAddress": "invalid"
+            }
+            """);
+
+        var loaded = store.Load();
+
+        Assert.Equal(30, loaded.ScanTimeoutSeconds);
+        Assert.Equal("127.0.0.1", loaded.OscHost);
+        Assert.Equal(9000, loaded.OscPort);
+        Assert.StartsWith("/", loaded.OscAddress);
+    }
 }

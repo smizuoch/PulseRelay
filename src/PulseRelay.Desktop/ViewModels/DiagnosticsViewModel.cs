@@ -22,6 +22,7 @@ public sealed partial class DiagnosticsViewModel : ObservableObject, IDisposable
     private readonly BridgeSupervisor _supervisor;
     private readonly AppSettings _settings;
     private readonly RingBufferLogSink _logSink;
+    private bool _disposed;
 
     [ObservableProperty]
     private string _stateText = "";
@@ -59,6 +60,12 @@ public sealed partial class DiagnosticsViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _supervisor.SnapshotChanged -= OnSnapshotChanged;
         _logSink.EntryAdded -= OnEntryAdded;
         LocalizationManager.LanguageChanged -= OnLanguageChanged;
@@ -84,10 +91,22 @@ public sealed partial class DiagnosticsViewModel : ObservableObject, IDisposable
     // Both events fire on logging/BLE/timer threads; marshal before touching properties
     // or the ObservableCollection.
     private void OnSnapshotChanged(object? sender, SupervisorSnapshot snapshot) =>
-        Dispatcher.UIThread.Post(Refresh);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed)
+            {
+                Refresh();
+            }
+        });
 
     private void OnEntryAdded(object? sender, LogEntry entry) =>
-        Dispatcher.UIThread.Post(() => Append(entry));
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed)
+            {
+                Append(entry);
+            }
+        });
 
     private void OnLanguageChanged(object? sender, EventArgs e) => Refresh();
 

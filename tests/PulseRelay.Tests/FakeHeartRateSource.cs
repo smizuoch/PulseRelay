@@ -20,6 +20,14 @@ public sealed class FakeHeartRateSource : IHeartRateSource
     /// </summary>
     public string? DescriptionAfterStart { get; set; }
 
+    public Exception? StopFailure { get; set; }
+
+    public TaskCompletionSource? StopGate { get; set; }
+
+    public int StopCalls { get; private set; }
+
+    public int DisposeCalls { get; private set; }
+
     public string Description { get; set; } = "Fake device";
 
     public HeartRateSourceState State { get; private set; } = HeartRateSourceState.Idle;
@@ -47,13 +55,27 @@ public sealed class FakeHeartRateSource : IHeartRateSource
         return Task.CompletedTask;
     }
 
-    public Task StopAsync()
+    public async Task StopAsync()
     {
+        StopCalls++;
+        if (StopGate is not null)
+        {
+            await StopGate.Task;
+        }
+
+        if (StopFailure is not null)
+        {
+            throw StopFailure;
+        }
+
         SetState(HeartRateSourceState.Disconnected);
-        return Task.CompletedTask;
     }
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        DisposeCalls++;
+        return ValueTask.CompletedTask;
+    }
 
     public void EmitSample(int bpm, DateTimeOffset timestamp)
     {

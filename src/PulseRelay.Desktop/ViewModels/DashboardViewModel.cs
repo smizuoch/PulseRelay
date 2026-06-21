@@ -45,6 +45,7 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     private readonly SettingsStore _settingsStore;
     private readonly RingBufferLogSink _logSink;
     private readonly DispatcherTimer _ticker;
+    private bool _disposed;
 
     [ObservableProperty]
     private string _bpmText = "—";
@@ -138,6 +139,12 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _ticker.Stop();
         _supervisor.SnapshotChanged -= OnSnapshotChanged;
         LocalizationManager.LanguageChanged -= OnLanguageChanged;
@@ -186,8 +193,13 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
             : snapshot.Session.OscStatus == OscOutputStatus.Off;
         if (_supervisor.TrySetOscEnabled(enable, _settings, out _))
         {
+            bool previous = _settings.OscEnabled;
             _settings.OscEnabled = enable;
-            _settingsStore.Save(_settings);
+            if (!_settingsStore.TrySave(_settings, out _))
+            {
+                _settings.OscEnabled = previous;
+                _supervisor.TrySetOscEnabled(previous, _settings, out _);
+            }
         }
 
         Refresh();
@@ -200,8 +212,15 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var previous = _settings.Language;
         _settings.Language = value.Value;
-        _settingsStore.Save(_settings);
+        if (!_settingsStore.TrySave(_settings, out _))
+        {
+            _settings.Language = previous;
+            SelectedLanguage = LanguageOptions.First(o => o.Value == previous);
+            return;
+        }
+
         LocalizationManager.Apply(value.Value);
     }
 
@@ -219,10 +238,21 @@ public sealed partial class DashboardViewModel : ObservableObject, IDisposable
     }
 
     private void OnSnapshotChanged(object? sender, SupervisorSnapshot snapshot) =>
-        Dispatcher.UIThread.Post(Refresh);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_disposed)
+            {
+                Refresh();
+            }
+        });
 
     private void Refresh()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var snapshot = _supervisor.Snapshot;
         var session = snapshot.Session;
         var now = DateTimeOffset.UtcNow;
