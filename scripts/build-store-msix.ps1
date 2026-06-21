@@ -10,7 +10,9 @@ param(
     [string] $Configuration = "Release",
 
     [ValidateSet("win-x64", "win-arm64")]
-    [string] $Runtime = "win-x64"
+    [string] $Runtime = "win-x64",
+
+    [switch] $CreateBundle
 )
 
 Set-StrictMode -Version Latest
@@ -119,6 +121,9 @@ $stagingDirectory = Join-Path $workDirectory "staging"
 $inspectDirectory = Join-Path $workDirectory "inspect"
 $assetsDirectory = Join-Path $stagingDirectory "Assets"
 $packagePath = Join-Path $storeRoot "PulseRelay_${Version}_${packageArchitecture}.msix"
+$bundleInputDirectory = Join-Path $storeRoot "bundle-input"
+$bundleInspectDirectory = Join-Path $storeRoot "bundle-inspect"
+$bundlePath = Join-Path $storeRoot "PulseRelay_${Version}.msixbundle"
 $checksumPath = Join-Path $storeRoot "SHA256SUMS.txt"
 
 foreach ($requiredPath in @($manifestTemplate, $projectPath, $sourceLogo)) {
@@ -282,8 +287,57 @@ if ($pathLeaks.Count -gt 0) {
     throw "Local user paths were found in packaged text files: $leakFiles"
 }
 
+if ($CreateBundle) {
+    foreach ($bundleWorkPath in @($bundleInputDirectory, $bundleInspectDirectory)) {
+        if (Test-Path -LiteralPath $bundleWorkPath) {
+            Remove-Item -LiteralPath $bundleWorkPath -Recurse -Force
+        }
+    }
+    if (Test-Path -LiteralPath $bundlePath) {
+        Remove-Item -LiteralPath $bundlePath -Force
+    }
+
+    New-Item -ItemType Directory -Path $bundleInputDirectory, $bundleInspectDirectory -Force |
+        Out-Null
+
+    $packagesToBundle = @(
+        Get-ChildItem -LiteralPath $storeRoot -Filter "PulseRelay_${Version}_*.msix" -File |
+            Sort-Object -Property Name
+    )
+    $expectedPackageNames = @(
+        "PulseRelay_${Version}_x64.msix",
+        "PulseRelay_${Version}_arm64.msix"
+    )
+    $actualPackageNames = @($packagesToBundle.Name)
+    $missingPackageNames = @($expectedPackageNames | Where-Object { $_ -notin $actualPackageNames })
+    if ($missingPackageNames.Count -gt 0) {
+        throw "Cannot create MSIX bundle. Missing packages: $($missingPackageNames -join ', ')"
+    }
+
+    Copy-Item -LiteralPath $packagesToBundle.FullName -Destination $bundleInputDirectory
+
+    Write-Host "Creating x64 and ARM64 MSIX bundle..."
+    & $makeAppx bundle /d $bundleInputDirectory /p $bundlePath /bv $Version /o
+    Assert-LastExitCode -Operation "MakeAppx bundle"
+
+    & $makeAppx unbundle /p $bundlePath /d $bundleInspectDirectory /o
+    Assert-LastExitCode -Operation "MakeAppx unbundle"
+
+    $bundledPackages = @(Get-ChildItem -LiteralPath $bundleInspectDirectory -Filter "*.msix" -File -Recurse)
+    if ($bundledPackages.Count -ne 2) {
+        throw "Expected the MSIX bundle to contain 2 application packages, but found $($bundledPackages.Count)."
+    }
+}
+
 $hash = Get-FileHash -LiteralPath $packagePath -Algorithm SHA256
-Get-ChildItem -LiteralPath $storeRoot -Filter "*.msix" -File |
+Get-ChildItem -LiteralPath $storeRoot -File |
+    Where-Object {
+        $_.Name -in @(
+            "PulseRelay_${Version}_x64.msix",
+            "PulseRelay_${Version}_arm64.msix",
+            "PulseRelay_${Version}.msixbundle"
+        )
+    } |
     Sort-Object -Property Name |
     ForEach-Object {
         $packageHash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
@@ -295,3 +349,6 @@ Write-Host ""
 Write-Host "Store MSIX created successfully:"
 Write-Host "  Package: $packagePath"
 Write-Host "  SHA-256: $($hash.Hash)"
+if ($CreateBundle) {
+    Write-Host "  Bundle: $bundlePath"
+}

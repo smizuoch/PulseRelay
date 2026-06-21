@@ -30,12 +30,14 @@ The artifact contains:
 
 - `PulseRelay_A.B.C.0_x64.msix`
 - `PulseRelay_A.B.C.0_arm64.msix`
+- `PulseRelay_A.B.C.0.msixbundle`
 - `SHA256SUMS.txt`
 
-Upload both MSIX packages to the Packages section of the same app submission
-in Partner Center. These packages are intentionally unsigned; Microsoft signs
-Store packages after certification and delivers the appropriate architecture
-to each device.
+Upload the MSIX bundle to the Packages section of the app submission in Partner
+Center. The individual MSIX packages are also retained in the workflow artifact
+for inspection. These files are intentionally unsigned; Microsoft signs Store
+packages after certification and delivers the appropriate architecture to each
+device.
 
 ## Local Windows build
 
@@ -51,11 +53,13 @@ pwsh .\scripts\build-store-msix.ps1 `
 pwsh .\scripts\build-store-msix.ps1 `
   -IdentityFile .\.local\store-identity.json `
   -Version 1.0.0.0 `
-  -Runtime win-arm64
+  -Runtime win-arm64 `
+  -CreateBundle
 ```
 
 The Windows SDK must be installed because the script uses `MakeAppx.exe`.
 
 The source logo remains `src/PulseRelay.Desktop/Assets/PulseRelay.png`.
 Required package logo sizes are derived from that file during the build and are
-written only under `artifacts/store/staging/Assets`.
+written only under the architecture-specific
+`artifacts/store/<architecture>/staging/Assets` directory.

@@ -86,10 +86,16 @@ jobs:
           Remove-Item -LiteralPath .\artifacts\store -Recurse -Force -ErrorAction SilentlyContinue
 
           foreach ($runtime in @("win-x64", "win-arm64")) {
-            .\scripts\build-store-msix.ps1 `
-              -IdentityFile "$env:STORE_IDENTITY_FILE" `
-              -Version "$env:MSIX_VERSION" `
-              -Runtime $runtime
+            $buildArguments = @{
+              IdentityFile = $env:STORE_IDENTITY_FILE
+              Version = $env:MSIX_VERSION
+              Runtime = $runtime
+            }
+            if ($runtime -eq "win-arm64") {
+              $buildArguments["CreateBundle"] = $true
+            }
+
+            .\scripts\build-store-msix.ps1 @buildArguments
           }
 
       - name: Upload Store-ready package
@@ -98,6 +104,7 @@ jobs:
           name: PulseRelay-Store-${{ inputs.version }}
           path: |
             artifacts/store/*.msix
+            artifacts/store/*.msixbundle
             artifacts/store/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
