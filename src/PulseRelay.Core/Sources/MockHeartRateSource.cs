@@ -33,6 +33,11 @@ public sealed class MockHeartRateSource : IHeartRateSource
         }
 
         _interval = interval ?? TimeSpan.FromSeconds(1);
+        if (_interval <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(interval), _interval, "Sample interval must be positive.");
+        }
+
         _minBpm = minBpm;
         _maxBpm = maxBpm;
         _logger = logger ?? NullLogger<MockHeartRateSource>.Instance;

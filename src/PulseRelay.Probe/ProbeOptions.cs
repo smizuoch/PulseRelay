@@ -99,6 +99,10 @@ public sealed class ProbeOptions
         bool verbose = false;
         int timeoutSec = 30;
         int intervalMs = 1000;
+        bool sawAll = false;
+        bool sawService = false;
+        bool sawName = false;
+        bool sawInterval = false;
 
         for (int i = 1; i < args.Length; i++)
         {
@@ -106,9 +110,11 @@ public sealed class ProbeOptions
             switch (arg)
             {
                 case "--all":
+                    sawAll = true;
                     scanAll = true;
                     break;
                 case "--service":
+                    sawService = true;
                     if (!TryTakeValue(args, ref i, arg, ref error, out serviceFilter))
                     {
                         return false;
@@ -116,6 +122,7 @@ public sealed class ProbeOptions
 
                     break;
                 case "--name":
+                    sawName = true;
                     if (!TryTakeValue(args, ref i, arg, ref error, out nameFilter))
                     {
                         return false;
@@ -154,6 +161,7 @@ public sealed class ProbeOptions
 
                     break;
                 case "--interval-ms":
+                    sawInterval = true;
                     if (!TryTakeInt(args, ref i, arg, ref error, out intervalMs))
                     {
                         return false;
@@ -167,6 +175,30 @@ public sealed class ProbeOptions
                     error = $"Unknown option \"{arg}\" for command \"{args[0]}\".";
                     return false;
             }
+        }
+
+        if (command != ProbeCommand.Scan && sawAll)
+        {
+            error = "Option --all is only valid for command \"scan\".";
+            return false;
+        }
+
+        if (command != ProbeCommand.Scan && sawService)
+        {
+            error = "Option --service is only valid for command \"scan\".";
+            return false;
+        }
+
+        if (command != ProbeCommand.Connect && sawName)
+        {
+            error = "Option --name is only valid for command \"connect\".";
+            return false;
+        }
+
+        if (command != ProbeCommand.Mock && sawInterval)
+        {
+            error = "Option --interval-ms is only valid for command \"mock\".";
+            return false;
         }
 
         if (command == ProbeCommand.Scan)
@@ -184,6 +216,12 @@ public sealed class ProbeOptions
                 error = $"Only the Heart Rate Service filter (180D) is supported, got \"{serviceFilter}\".";
                 return false;
             }
+        }
+
+        if (string.IsNullOrWhiteSpace(oscHost))
+        {
+            error = "Option --osc-host requires a non-empty host.";
+            return false;
         }
 
         if (oscPort > ushort.MaxValue)
@@ -204,7 +242,7 @@ public sealed class ProbeOptions
             ScanAll = scanAll,
             NameFilter = nameFilter,
             OscEnabled = osc,
-            OscHost = oscHost,
+            OscHost = oscHost.Trim(),
             OscPort = oscPort,
             OscAddress = oscAddress,
             Verbose = verbose,

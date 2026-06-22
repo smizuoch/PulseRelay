@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using PulseRelay.Osc;
 
 namespace PulseRelay.App.Settings;
@@ -19,7 +18,7 @@ public static class SettingsValidation
         && port is >= MinPort and <= MaxPort;
 
     public static bool IsValidOscAddress(string? address) =>
-        !string.IsNullOrWhiteSpace(address) && address.StartsWith('/') && Ascii.IsValid(address);
+        OscWriter.IsValidAddress(address);
 
     public static bool IsValidHost(string? host) => !string.IsNullOrWhiteSpace(host);
 
