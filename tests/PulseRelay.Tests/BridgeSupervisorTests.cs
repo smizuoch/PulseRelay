@@ -99,6 +99,26 @@ public class BridgeSupervisorTests
     }
 
     [Fact]
+    public async Task Reconnect_waits_for_previous_source_to_stop_before_creating_replacement()
+    {
+        await using var h = new Harness();
+        await h.StartAndStreamAsync();
+        var stopGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Factory.Latest.StopGate = stopGate;
+
+        h.Factory.Latest.RaiseDisconnected();
+
+        await h.WaitForAsync(s => s.RunState == BridgeRunState.Reconnecting, "retry scheduled");
+        h.Time.Advance(TimeSpan.FromSeconds(1));
+        await Task.Delay(20);
+
+        Assert.Single(h.Factory.Created);
+
+        stopGate.SetResult();
+        await h.WaitForAsync(s => h.Factory.Created.Count == 2, "replacement after previous stop");
+    }
+
+    [Fact]
     public async Task Does_not_reconnect_after_manual_stop()
     {
         await using var h = new Harness();

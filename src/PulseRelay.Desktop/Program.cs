@@ -1,4 +1,5 @@
 using Avalonia;
+using PulseRelay.Desktop.Services;
 
 namespace PulseRelay.Desktop;
 
@@ -12,6 +13,14 @@ public static class Program
             .LogToTrace();
 
     [STAThread]
-    public static void Main(string[] args) =>
+    public static void Main(string[] args)
+    {
+        using var singleInstance = SingleInstanceGuard.Acquire();
+        if (!singleInstance.HasOwnership)
+        {
+            return;
+        }
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 }
