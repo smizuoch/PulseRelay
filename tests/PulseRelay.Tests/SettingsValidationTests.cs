@@ -58,4 +58,47 @@ public class SettingsValidationTests
     [InlineData(null, false)]
     public void Validates_host(string? host, bool expected) =>
         Assert.Equal(expected, SettingsValidation.IsValidHost(host));
+
+    [Fact]
+    public void Normalize_repairs_invalid_values_and_trims_valid_strings()
+    {
+        var settings = new AppSettings
+        {
+            SourceKind = (HeartRateSourceKind)999,
+            ScanTimeoutSeconds = 0,
+            OscHost = "  192.168.0.10  ",
+            OscPort = 70000,
+            OscAddress = " /avatar/parameters/HeartRate ",
+            Theme = (AppTheme)999,
+            Language = (AppLanguage)999,
+        };
+
+        var normalized = SettingsValidation.Normalize(settings);
+
+        Assert.Same(settings, normalized);
+        Assert.Equal(HeartRateSourceKind.Ble, normalized.SourceKind);
+        Assert.Equal(30, normalized.ScanTimeoutSeconds);
+        Assert.Equal("192.168.0.10", normalized.OscHost);
+        Assert.Equal(9000, normalized.OscPort);
+        Assert.Equal("/avatar/parameters/HeartRate", normalized.OscAddress);
+        Assert.Equal(AppTheme.Dark, normalized.Theme);
+        Assert.Equal(AppLanguage.System, normalized.Language);
+    }
+
+    [Fact]
+    public void Normalize_replaces_invalid_host_and_address()
+    {
+        var settings = new AppSettings
+        {
+            ScanTimeoutSeconds = 3601,
+            OscHost = "   ",
+            OscAddress = "not/an/address",
+        };
+
+        var normalized = SettingsValidation.Normalize(settings);
+
+        Assert.Equal(30, normalized.ScanTimeoutSeconds);
+        Assert.Equal("127.0.0.1", normalized.OscHost);
+        Assert.Equal("/avatar/parameters/VRCOSC/Heartrate/Value", normalized.OscAddress);
+    }
 }

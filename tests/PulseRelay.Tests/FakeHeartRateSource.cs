@@ -22,6 +22,8 @@ public sealed class FakeHeartRateSource : IHeartRateSource
 
     public Exception? StopFailure { get; set; }
 
+    public Exception? DisposeFailure { get; set; }
+
     public TaskCompletionSource? StopGate { get; set; }
 
     public int StopCalls { get; private set; }
@@ -74,10 +76,18 @@ public sealed class FakeHeartRateSource : IHeartRateSource
     public ValueTask DisposeAsync()
     {
         DisposeCalls++;
+        if (DisposeFailure is not null)
+        {
+            throw DisposeFailure;
+        }
+
         return ValueTask.CompletedTask;
     }
 
-    public void EmitSample(int bpm, DateTimeOffset timestamp)
+    public void EmitSample(
+        int bpm,
+        DateTimeOffset timestamp,
+        SensorContactStatus sensorContact = SensorContactStatus.Contact)
     {
         if (State != HeartRateSourceState.Streaming)
         {
@@ -86,7 +96,7 @@ public sealed class FakeHeartRateSource : IHeartRateSource
 
         SampleReceived?.Invoke(this, new HeartRateSample(
             bpm,
-            SensorContactStatus.Contact,
+            sensorContact,
             EnergyExpendedKilojoules: null,
             RrIntervalsMs: [60_000.0 / bpm],
             Timestamp: timestamp));

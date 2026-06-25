@@ -140,6 +140,35 @@ public class BridgeSupervisorTests
     }
 
     [Fact]
+    public async Task Stop_when_not_running_is_completed_noop()
+    {
+        await using var h = new Harness();
+
+        Task stop = h.Supervisor.StopAsync();
+
+        Assert.True(stop.IsCompletedSuccessfully);
+        Assert.Equal(BridgeRunState.Stopped, h.Supervisor.Snapshot.RunState);
+    }
+
+    [Fact]
+    public async Task Concurrent_stop_returns_existing_stop_task()
+    {
+        await using var h = new Harness();
+        await h.StartAndStreamAsync();
+        var stopGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        h.Factory.Latest.StopGate = stopGate;
+
+        Task first = h.Supervisor.StopAsync();
+        await Task.Delay(20);
+        Task second = h.Supervisor.StopAsync();
+
+        Assert.Same(first, second);
+
+        stopGate.SetResult();
+        await first;
+    }
+
+    [Fact]
     public async Task Streaming_shows_stale_after_display_threshold_without_reconnecting()
     {
         using var culture = new CultureScope("en");
@@ -318,6 +347,50 @@ public class BridgeSupervisorTests
         Assert.False(h.Supervisor.IsRunning);
         Assert.Equal(BridgeRunState.Stopped, h.Supervisor.Snapshot.RunState);
         Assert.Equal(BridgeFailureKind.ConnectionTimeout, h.Supervisor.Snapshot.Session.FailureKind);
+    }
+
+    [Fact]
+    public async Task Initial_connection_timeout_monitor_exits_when_stopped_before_deadline()
+    {
+        var options = new BridgeSupervisorOptions
+        {
+            InitialConnectionTimeout = TimeSpan.FromMinutes(30),
+        };
+        await using var h = new Harness(options);
+        h.Settings.SourceKind = HeartRateSourceKind.Ble;
+        bool timedOut = false;
+        h.Supervisor.InitialConnectionTimedOut += (_, _) => timedOut = true;
+
+        h.Supervisor.Start(h.Settings);
+        await h.WaitForAsync(s => s.Session.Status == BridgeStatus.WaitingForData, "connected");
+        await h.Supervisor.StopAsync();
+        h.Time.Advance(TimeSpan.FromMinutes(30));
+        await Task.Delay(20);
+
+        Assert.False(timedOut);
+        Assert.False(h.Supervisor.IsRunning);
+    }
+
+    [Fact]
+    public async Task Initial_connection_timeout_observer_exception_is_swallowed()
+    {
+        var options = new BridgeSupervisorOptions
+        {
+            InitialConnectionTimeout = TimeSpan.FromMinutes(30),
+        };
+        await using var h = new Harness(options);
+        h.Settings.SourceKind = HeartRateSourceKind.Ble;
+        h.Factory.StartFailureForAttempt = _ => new TimeoutException("no device");
+        h.Supervisor.InitialConnectionTimedOut += (_, _) => throw new InvalidOperationException("observer failed");
+
+        h.Supervisor.Start(h.Settings);
+        await h.WaitForAsync(s => s.RunState == BridgeRunState.Reconnecting, "initial retry");
+        h.Time.Advance(TimeSpan.FromMinutes(30));
+
+        await h.WaitForAsync(
+            s => s.Session.FailureKind == BridgeFailureKind.ConnectionTimeout,
+            "timeout failure");
+        Assert.False(h.Supervisor.IsRunning);
     }
 
     [Fact]

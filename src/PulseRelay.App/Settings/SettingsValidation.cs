@@ -43,8 +43,9 @@ public static class SettingsValidation
             settings.OscPort = defaults.OscPort;
         }
 
-        settings.OscAddress = IsValidOscAddress(settings.OscAddress)
-            ? settings.OscAddress.Trim()
+        string? oscAddress = settings.OscAddress?.Trim();
+        settings.OscAddress = IsValidOscAddress(oscAddress)
+            ? oscAddress!
             : defaults.OscAddress;
         if (!Enum.IsDefined(settings.Theme))
         {

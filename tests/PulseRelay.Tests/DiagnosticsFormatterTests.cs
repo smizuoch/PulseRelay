@@ -71,4 +71,38 @@ public class DiagnosticsFormatterTests
         Assert.Contains("peer [mac-redacted] connected", report);
         Assert.DoesNotContain("AA:BB:CC:DD:EE:FF", report);
     }
+
+    [Fact]
+    public void Report_includes_last_error_when_present()
+    {
+        var snapshot = SupervisorSnapshot.Initial with
+        {
+            Session = BridgeSnapshot.Initial with
+            {
+                Status = BridgeStatus.Failed,
+                LastError = "scan failed",
+            },
+        };
+
+        string report = DiagnosticsFormatter.BuildReport(snapshot, [], DateTimeOffset.UtcNow);
+
+        Assert.Contains("LastError: scan failed", report);
+    }
+
+    [Fact]
+    public void Report_includes_last_sample_timestamp_when_present()
+    {
+        var timestamp = DateTimeOffset.Parse("2026-06-25T08:00:00Z");
+        var snapshot = SupervisorSnapshot.Initial with
+        {
+            Session = BridgeSnapshot.Initial with
+            {
+                LastSampleAt = timestamp,
+            },
+        };
+
+        string report = DiagnosticsFormatter.BuildReport(snapshot, [], DateTimeOffset.UtcNow);
+
+        Assert.Contains(timestamp.ToString("O"), report);
+    }
 }

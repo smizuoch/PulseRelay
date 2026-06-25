@@ -203,6 +203,12 @@ public sealed class ProbeOptions
 
         if (command == ProbeCommand.Scan)
         {
+            if (sawAll && sawService)
+            {
+                error = "Options --all and --service cannot be used together.";
+                return false;
+            }
+
             if (!scanAll && serviceFilter is null)
             {
                 error = "scan requires either --service 180D or --all.";
@@ -216,6 +222,12 @@ public sealed class ProbeOptions
                 error = $"Only the Heart Rate Service filter (180D) is supported, got \"{serviceFilter}\".";
                 return false;
             }
+        }
+
+        if (command == ProbeCommand.Connect && sawName && string.IsNullOrWhiteSpace(nameFilter))
+        {
+            error = "Option --name requires a non-empty value.";
+            return false;
         }
 
         if (string.IsNullOrWhiteSpace(oscHost))
@@ -240,7 +252,7 @@ public sealed class ProbeOptions
         {
             Command = command,
             ScanAll = scanAll,
-            NameFilter = nameFilter,
+            NameFilter = nameFilter?.Trim(),
             OscEnabled = osc,
             OscHost = oscHost.Trim(),
             OscPort = oscPort,
@@ -274,6 +286,14 @@ public sealed class ProbeOptions
             return false;
         }
 
+        string candidate = args[i + 1];
+        if (IsOptionToken(candidate))
+        {
+            error = $"Option {name} requires a value.";
+            value = null;
+            return false;
+        }
+
         value = args[++i];
         return true;
     }
@@ -294,4 +314,6 @@ public sealed class ProbeOptions
 
         return true;
     }
+
+    private static bool IsOptionToken(string value) => value.StartsWith("--", StringComparison.Ordinal);
 }

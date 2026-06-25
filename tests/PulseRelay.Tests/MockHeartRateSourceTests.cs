@@ -6,6 +6,36 @@ namespace PulseRelay.Tests;
 
 public class MockHeartRateSourceTests
 {
+    [Theory]
+    [InlineData(0, 100)]
+    [InlineData(100, 99)]
+    public void Rejects_invalid_bpm_band(int minBpm, int maxBpm)
+    {
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new MockHeartRateSource(minBpm: minBpm, maxBpm: maxBpm));
+
+        Assert.Equal("minBpm", ex.ParamName);
+    }
+
+    [Fact]
+    public void Rejects_non_positive_interval()
+    {
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new MockHeartRateSource(interval: TimeSpan.Zero));
+
+        Assert.Equal("interval", ex.ParamName);
+    }
+
+    [Fact]
+    public async Task Stop_before_start_is_noop()
+    {
+        var source = new MockHeartRateSource(interval: TimeSpan.FromMilliseconds(10));
+
+        await source.StopAsync();
+
+        Assert.Equal(HeartRateSourceState.Idle, source.State);
+    }
+
     [Fact]
     public async Task Emits_samples_within_band_after_start()
     {

@@ -96,6 +96,19 @@ public class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Json_null_yields_defaults()
+    {
+        var store = new SettingsStore(_directory);
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(store.FilePath, "null");
+
+        var settings = store.Load();
+
+        Assert.Equal(HeartRateSourceKind.Ble, settings.SourceKind);
+        Assert.Equal(9000, settings.OscPort);
+    }
+
+    [Fact]
     public void Save_after_corrupt_load_recovers()
     {
         var store = new SettingsStore(_directory);

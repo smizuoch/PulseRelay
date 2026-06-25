@@ -7,6 +7,14 @@ namespace PulseRelay.Tests;
 public class RingBufferLogSinkTests
 {
     [Fact]
+    public void Rejects_non_positive_capacity()
+    {
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => new RingBufferLogSink(0));
+
+        Assert.Equal("capacity", ex.ParamName);
+    }
+
+    [Fact]
     public void Captures_logged_messages_with_category_and_level()
     {
         using var sink = new RingBufferLogSink();
@@ -77,6 +85,17 @@ public class RingBufferLogSinkTests
         Assert.Equal(2, raised);
 
         sink.Clear();
+        Assert.Empty(sink.GetSnapshot());
+    }
+
+    [Fact]
+    public void Log_level_none_is_ignored()
+    {
+        using var sink = new RingBufferLogSink();
+        var logger = sink.CreateLogger("cat");
+
+        logger.Log(LogLevel.None, "hidden");
+
         Assert.Empty(sink.GetSnapshot());
     }
 }

@@ -74,7 +74,7 @@ public static class BridgeStatusCopy
         {
             return string.IsNullOrWhiteSpace(deviceNameFilter)
                 ? LocalizationManager.GetString("Device_BleFallback")
-                : deviceNameFilter;
+                : deviceNameFilter.Trim();
         }
 
         return sourceDescription;

@@ -35,4 +35,14 @@ public class SingleInstanceGuardTests
         using var next = SingleInstanceGuard.Acquire(name);
         Assert.True(next.HasOwnership);
     }
+
+    [Fact]
+    public void Dispose_is_idempotent()
+    {
+        string name = $"PulseRelay.Tests.{Guid.NewGuid():N}";
+        var guard = SingleInstanceGuard.Acquire(name);
+
+        guard.Dispose();
+        guard.Dispose();
+    }
 }

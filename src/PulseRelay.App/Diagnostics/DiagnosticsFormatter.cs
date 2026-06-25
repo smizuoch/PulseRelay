@@ -9,15 +9,16 @@ namespace PulseRelay.App.Diagnostics;
 /// (log policy: diagnostics are not localized) and always redacts MAC-shaped addresses —
 /// BLE peripheral addresses are session-scoped RPAs and must never leave the machine.
 /// </summary>
-public static partial class DiagnosticsFormatter
+public static class DiagnosticsFormatter
 {
     // Lookarounds keep longer hex runs (UUIDs) intact while catching aa:bb:cc:dd:ee:ff
     // and aa-bb-cc-dd-ee-ff in any case.
-    [GeneratedRegex("(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}(?![0-9A-Fa-f])")]
-    private static partial Regex MacPattern();
+    private static readonly Regex MacPattern = new(
+        "(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}(?![0-9A-Fa-f])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static string RedactMacAddresses(string text) =>
-        MacPattern().Replace(text, "[mac-redacted]");
+        MacPattern.Replace(text, "[mac-redacted]");
 
     /// <summary>One log line, identical in the Diagnostics window and the copied report.</summary>
     public static string FormatLine(LogEntry entry) =>

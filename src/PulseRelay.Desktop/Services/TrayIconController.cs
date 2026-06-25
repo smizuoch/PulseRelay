@@ -27,6 +27,7 @@ public sealed class TrayIconController : IDisposable
     private readonly Func<Task> _requestShutdown;
     private readonly ILogger _logger;
     private readonly TrayIcon _trayIcon;
+    private readonly NativeMenu _menu = new();
     private (bool IsRunning, bool OscOn) _menuState;
     private bool _disposed;
 
@@ -50,6 +51,10 @@ public sealed class TrayIconController : IDisposable
             Icon = new WindowIcon(AssetLoader.Open(
                 new Uri("avares://PulseRelay.Desktop/Assets/tray-icon.png"))),
             ToolTipText = "PulseRelay",
+            // Assign the menu instance once. macOS's native exporter throws
+            // "The menu being updated does not match" if TrayIcon.Menu is later
+            // replaced with a different NativeMenu, so rebuilds mutate Items instead.
+            Menu = _menu,
         };
         TrayIcon.SetIcons(Application.Current!, [_trayIcon]);
 
@@ -126,6 +131,13 @@ public sealed class TrayIconController : IDisposable
             {
                 _logger.LogError(ex, "Tray start/stop action failed");
             }
+            finally
+            {
+                if (!_disposed)
+                {
+                    RebuildMenu();
+                }
+            }
         };
 
         var osc = new NativeMenuItem(
@@ -135,18 +147,14 @@ public sealed class TrayIconController : IDisposable
         var quit = new NativeMenuItem(LocalizationManager.GetString("Tray_Quit"));
         quit.Click += (_, _) => _ = _requestShutdown();
 
-        _trayIcon.Menu = new NativeMenu
-        {
-            Items =
-            {
-                show,
-                new NativeMenuItemSeparator(),
-                startStop,
-                osc,
-                new NativeMenuItemSeparator(),
-                quit,
-            },
-        };
+        // Mutate the existing menu in place rather than reassigning TrayIcon.Menu; see ctor.
+        _menu.Items.Clear();
+        _menu.Items.Add(show);
+        _menu.Items.Add(new NativeMenuItemSeparator());
+        _menu.Items.Add(startStop);
+        _menu.Items.Add(osc);
+        _menu.Items.Add(new NativeMenuItemSeparator());
+        _menu.Items.Add(quit);
     }
 
     private void ShowMainWindow()

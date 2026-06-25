@@ -6,11 +6,12 @@ using Avalonia.Headless;
 namespace PulseRelay.Tests;
 
 /// <summary>
-/// Headless Avalonia host for binding-level tests. A bare <see cref="Application"/> is
-/// enough: the tests exercise bindings, not the real App (which would spin up the bridge).
+/// Headless Avalonia host. The real App is used so view smoke tests load the same resource
+/// dictionary as production; without a desktop lifetime it does not spin up the bridge.
 /// </summary>
 public class TestAppBuilder
 {
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<Application>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        AppBuilder.Configure<global::PulseRelay.Desktop.App>()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions());
 }
