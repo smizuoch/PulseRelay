@@ -10,6 +10,8 @@ public static class SourceFactoryProvider
 #if WINDOWS_BLE
         new WindowsBleSourceFactory(loggerFactory);
 #else
-        new MockOnlySourceFactory(loggerFactory);
+        OperatingSystem.IsLinux()
+            ? new LinuxBleSourceFactory(loggerFactory)
+            : new MockOnlySourceFactory(loggerFactory);
 #endif
 }

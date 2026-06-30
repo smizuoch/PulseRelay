@@ -9,8 +9,8 @@ BPM を UDP 経由でローカルの OSC エンドポイント（例: VRChat）�
 
 現在の状態: **デスクトップアプリ + CLI プローブ。** Avalonia 製デスクトップアプリが
 Windows 11 上で実機トラッカーからライブ BPM を受信し、OSC へ転送できることを
-Fitbit Charge 6 の実機で確認済みです。macOS/Linux ではシミュレーションソースで動作します
-（Bluetooth LE 対応は現時点で Windows のみ）。
+Fitbit Charge 6 の実機で確認済みです。Linux ビルドには実験的な BlueZ/D-Bus BLE
+バックエンドが入っています。macOS ではシミュレーションソースで動作します。
 
 ## クイックスタート（Windows 11）
 
@@ -111,6 +111,7 @@ dotnet build PulseRelay.sln                  # Windows BLE を含む全体（ビ
 
 ```sh
 dotnet run --project src/PulseRelay.Probe -f net10.0 -- mock --osc
+dotnet run --project src/PulseRelay.Probe -f net10.0 -- mock --interval-ms 1 --sample-count 1
 ```
 
 Windows 11 — 実機 BLE（詳細な手順は
@@ -119,6 +120,13 @@ Windows 11 — 実機 BLE（詳細な手順は
 ```sh
 dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- scan --service 180D --verbose
 dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- connect --name "Charge 6" --verbose
+```
+
+Linux + system bus 上の BlueZ — 実験的な実機 BLE:
+
+```sh
+dotnet run --project src/PulseRelay.Probe -f net10.0 -- scan --service 180D --verbose
+dotnet run --project src/PulseRelay.Probe -f net10.0 -- connect --name "Charge 6" --verbose
 ```
 
 PulseRelay はリアルタイム BPM の取得に Fitbit Web API・Google Health API・クラウド

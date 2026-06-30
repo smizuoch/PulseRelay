@@ -26,6 +26,13 @@ public class ProbeCliTests
     [InlineData("connect")]
     public async Task Ble_commands_return_1_on_non_windows_build(params string[] args)
     {
+#if !WINDOWS_BLE
+        if (OperatingSystem.IsLinux())
+        {
+            return;
+        }
+#endif
+
         using var error = new StringWriter();
 
         int exitCode = await ProbeCli.RunAsync(args, error);
@@ -34,7 +41,7 @@ public class ProbeCliTests
         Assert.NotEqual(1, exitCode);
 #else
         Assert.Equal(1, exitCode);
-        Assert.Contains("BLE commands require the Windows build", error.ToString());
+        Assert.Contains("BLE commands require Windows 11", error.ToString());
 #endif
     }
 
@@ -57,6 +64,16 @@ public class ProbeCliTests
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
         int exitCode = await ProbeCli.RunAsync(["mock", "--interval-ms", "1"], error, cts.Token);
+
+        Assert.Equal(0, exitCode);
+    }
+
+    [Fact]
+    public async Task Mock_stops_after_requested_sample_count()
+    {
+        using var error = new StringWriter();
+
+        int exitCode = await ProbeCli.RunAsync(["mock", "--interval-ms", "1", "--sample-count", "1"], error);
 
         Assert.Equal(0, exitCode);
     }

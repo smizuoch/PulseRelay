@@ -48,5 +48,19 @@ public class DesktopGlueTests
         var factory = SourceFactoryProvider.Create(NullLoggerFactory.Instance);
 
         Assert.IsAssignableFrom<IHeartRateSourceFactory>(factory);
+#if WINDOWS_BLE
+        Assert.IsType<WindowsBleSourceFactory>(factory);
+#else
+        if (OperatingSystem.IsLinux())
+        {
+            Assert.IsType<LinuxBleSourceFactory>(factory);
+            Assert.True(factory.SupportsBle);
+        }
+        else
+        {
+            Assert.IsType<MockOnlySourceFactory>(factory);
+            Assert.False(factory.SupportsBle);
+        }
+#endif
     }
 }

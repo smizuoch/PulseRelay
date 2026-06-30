@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PulseRelay.Core\PulseRelay.Core.csproj" />
+    <ProjectReference Include="..\PulseRelay.LinuxBle\PulseRelay.LinuxBle.csproj"
+                      Condition="'$(TargetFramework)' == 'net10.0'" />
     <ProjectReference Include="..\PulseRelay.Osc\PulseRelay.Osc.csproj" />
     <ProjectReference Include="..\PulseRelay.WindowsBle\PulseRelay.WindowsBle.csproj"
                       Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'" />

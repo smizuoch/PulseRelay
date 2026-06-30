@@ -34,13 +34,15 @@ public sealed class ProbeOptions
 
     public int IntervalMs { get; private init; } = 1000;
 
+    public int? SampleCount { get; private init; }
+
     public static string Usage => """
         PulseRelay.Probe - heart-rate BLE probe and OSC bridge
 
         Commands:
-          scan --service 180D        Scan for devices advertising the Heart Rate Service (Windows only)
-          scan --all                 Diagnostic scan logging all nearby BLE advertisements (Windows only)
-          connect [--name <substr>]  Scan, connect, and stream heart-rate notifications (Windows only)
+          scan --service 180D        Scan for devices advertising the Heart Rate Service (Windows/Linux)
+          scan --all                 Diagnostic scan logging all nearby BLE advertisements (Windows/Linux)
+          connect [--name <substr>]  Scan, connect, and stream heart-rate notifications (Windows/Linux)
           mock                       Stream synthetic heart-rate samples (any platform)
 
         Options:
@@ -51,6 +53,7 @@ public sealed class ProbeOptions
           --osc-address <address>    OSC address (default /avatar/parameters/VRCOSC/Heartrate/Value)
           --timeout-sec <n>          Scan duration / device-search timeout (default 30)
           --interval-ms <n>          mock: sample interval (default 1000)
+          --sample-count <n>         mock: stop after n samples (default unlimited)
           --verbose                  Debug-level logging (raw payload hex, GATT details)
 
         Examples:
@@ -59,6 +62,7 @@ public sealed class ProbeOptions
           PulseRelay.Probe connect --name "Charge 6" --verbose
           PulseRelay.Probe connect --name "Charge 6" --osc
           PulseRelay.Probe mock --osc
+          PulseRelay.Probe mock --interval-ms 1 --sample-count 1
         """;
 
     public static bool TryParse(string[] args, out ProbeOptions options, out string error)
@@ -99,10 +103,12 @@ public sealed class ProbeOptions
         bool verbose = false;
         int timeoutSec = 30;
         int intervalMs = 1000;
+        int? sampleCount = null;
         bool sawAll = false;
         bool sawService = false;
         bool sawName = false;
         bool sawInterval = false;
+        bool sawSampleCount = false;
 
         for (int i = 1; i < args.Length; i++)
         {
@@ -168,6 +174,15 @@ public sealed class ProbeOptions
                     }
 
                     break;
+                case "--sample-count":
+                    sawSampleCount = true;
+                    if (!TryTakeInt(args, ref i, arg, ref error, out int parsedSampleCount))
+                    {
+                        return false;
+                    }
+
+                    sampleCount = parsedSampleCount;
+                    break;
                 case "--verbose":
                     verbose = true;
                     break;
@@ -198,6 +213,12 @@ public sealed class ProbeOptions
         if (command != ProbeCommand.Mock && sawInterval)
         {
             error = "Option --interval-ms is only valid for command \"mock\".";
+            return false;
+        }
+
+        if (command != ProbeCommand.Mock && sawSampleCount)
+        {
+            error = "Option --sample-count is only valid for command \"mock\".";
             return false;
         }
 
@@ -260,6 +281,7 @@ public sealed class ProbeOptions
             Verbose = verbose,
             TimeoutSec = timeoutSec,
             IntervalMs = intervalMs,
+            SampleCount = sampleCount,
         };
         return true;
     }

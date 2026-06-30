@@ -4,6 +4,7 @@
     "projects": [
       "src/PulseRelay.App/PulseRelay.App.csproj",
       "src/PulseRelay.Core/PulseRelay.Core.csproj",
+      "src/PulseRelay.LinuxBle/PulseRelay.LinuxBle.csproj",
       "src/PulseRelay.Osc/PulseRelay.Osc.csproj",
       "tests/PulseRelay.Tests/PulseRelay.Tests.csproj"
     ]

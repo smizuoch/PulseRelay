@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Logging;
 using PulseRelay.Core.HeartRate;
 using PulseRelay.Core.Sources;
+#if !WINDOWS_BLE
+using PulseRelay.LinuxBle;
+#endif
 using PulseRelay.Osc;
 #if WINDOWS_BLE
 using PulseRelay.WindowsBle;
@@ -50,7 +53,13 @@ public static class ProbeCli
                     logger,
                     cancellationToken).ConfigureAwait(false),
 #else
-                ProbeCommand.Scan or ProbeCommand.Connect => BleUnavailable(error),
+                ProbeCommand.Scan => OperatingSystem.IsLinux()
+                    ? await RunLinuxScanAsync(options, loggerFactory, cancellationToken).ConfigureAwait(false)
+                    : BleUnavailable(error),
+                ProbeCommand.Connect => OperatingSystem.IsLinux()
+                    ? await RunLinuxConnectAsync(options, loggerFactory, logger, cancellationToken)
+                        .ConfigureAwait(false)
+                    : BleUnavailable(error),
 #endif
                 _ => 2,
             };
@@ -95,7 +104,7 @@ public static class ProbeCli
     private static int BleUnavailable(TextWriter error)
     {
         error.WriteLine(
-            "BLE commands require the Windows build (net10.0-windows10.0.19041.0) running on Windows 11. "
+            "BLE commands require Windows 11 with the Windows build or Linux with BlueZ on the system bus. "
             + "On this platform only the 'mock' command is available.");
         return 1;
     }
@@ -111,10 +120,13 @@ public static class ProbeCli
         using var oscPublisher = options.OscEnabled
             ? new HeartRateOscPublisher(options.OscHost, options.OscPort, options.OscAddress)
             : null;
+        using var sampleLimitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         bool firstSample = true;
+        int samplesSeen = 0;
         source.SampleReceived += (_, sample) =>
         {
+            samplesSeen++;
             if (firstSample)
             {
                 firstSample = false;
@@ -128,6 +140,10 @@ public static class ProbeCli
                 sample.SensorContact,
                 sample.EnergyExpendedKilojoules is int kj ? $" energy={kj}kJ" : string.Empty,
                 string.Join(", ", sample.RrIntervalsMs.Select(ms => ms.ToString("0.0"))));
+            if (options.SampleCount is int sampleCount && samplesSeen >= sampleCount)
+            {
+                sampleLimitCts.Cancel();
+            }
         };
         source.StateChanged += (_, state) => logger.LogInformation("Source state: {State}", state);
 
@@ -137,12 +153,16 @@ public static class ProbeCli
         }
 
         logger.LogInformation("Starting source: {Description}", source.Description);
-        await source.StartAsync(cancellationToken).ConfigureAwait(false);
-        logger.LogInformation("Running until Ctrl+C...");
+        await source.StartAsync(sampleLimitCts.Token).ConfigureAwait(false);
+        logger.LogInformation(
+            options.SampleCount is int sampleCount
+                ? "Running until {SampleCount} sample(s) are received..."
+                : "Running until Ctrl+C...",
+            options.SampleCount);
 
         try
         {
-            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
+            await Task.Delay(Timeout.Infinite, sampleLimitCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -216,6 +236,83 @@ public static class ProbeCli
 
         var source = new BleHeartRateSource(
             loggerFactory.CreateLogger<BleHeartRateSource>(),
+            options.NameFilter,
+            TimeSpan.FromSeconds(options.TimeoutSec));
+
+        return await RunSourceAsync(source, options, logger, cancellationToken).ConfigureAwait(false);
+    }
+#endif
+
+#if !WINDOWS_BLE
+    private static async Task<int> RunLinuxScanAsync(
+        ProbeOptions options,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        var logger = loggerFactory.CreateLogger<BluezDbusHeartRateClient>();
+        await using var client = new BluezDbusHeartRateClient();
+        using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        scanCts.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSec));
+
+        int count = 0;
+        var heartRateAdvertisers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            await client.StartDiscoveryAsync(
+                options.ScanAll ? [] : [BluezUuids.HeartRateService],
+                "le",
+                scanCts.Token).ConfigureAwait(false);
+            logger.LogInformation("Scanning with BlueZ for {Timeout} s (Ctrl+C to stop early)...", options.TimeoutSec);
+            await foreach (var report in client.WatchAdvertisementsAsync(scanCts.Token).ConfigureAwait(false))
+            {
+                count++;
+                if (report.ServiceUuids.Any(uuid =>
+                        string.Equals(uuid, BluezUuids.HeartRateService, StringComparison.OrdinalIgnoreCase)))
+                {
+                    heartRateAdvertisers.Add(report.Address);
+                }
+
+                logger.LogInformation(
+                    "Advertisement: path={Path} address={Address} addressType={AddressType} name={Name} "
+                    + "services=[{Services}] rssi={Rssi} dBm",
+                    report.ObjectPath,
+                    report.Address,
+                    report.AddressType,
+                    string.IsNullOrEmpty(report.Name) ? "<none>" : report.Name,
+                    report.ServiceUuids.Count == 0 ? "<none>" : string.Join(", ", report.ServiceUuids),
+                    report.RssiDbm);
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            await client.StopDiscoveryAsync().ConfigureAwait(false);
+        }
+
+        logger.LogInformation(
+            "Scan finished: {Count} advertisement(s) logged, {HrCount} device(s) advertising Heart Rate Service 0x180D",
+            count,
+            heartRateAdvertisers.Count);
+        return 0;
+    }
+
+    private static async Task<int> RunLinuxConnectAsync(
+        ProbeOptions options,
+        ILoggerFactory loggerFactory,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        logger.LogInformation("=== Heart-rate sharing checklist (cannot be automated) ===");
+        logger.LogInformation("1. On the tracker, open the heart-rate sharing/equipment mode and keep it awake.");
+        logger.LogInformation("2. Start sharing on the tracker before connecting from PulseRelay.");
+        logger.LogInformation("3. The tracker connects to ONE equipment/app at a time - disconnect others first.");
+        logger.LogInformation("===========================================================");
+
+        var source = new BluezHeartRateSource(
+            new BluezDbusHeartRateClient(),
+            loggerFactory.CreateLogger<BluezHeartRateSource>(),
             options.NameFilter,
             TimeSpan.FromSeconds(options.TimeoutSec));
 

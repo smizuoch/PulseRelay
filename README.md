@@ -9,8 +9,8 @@ and forwards BPM to a local OSC endpoint over UDP (for example VRChat).
 
 Current status: **desktop app + CLI probe.** The Avalonia desktop app streams live BPM
 from a real tracker on Windows 11 and forwards it over OSC; this has been verified on
-hardware with a Fitbit Charge 6. macOS/Linux builds run with a simulated source
-(Bluetooth LE support is Windows-only for now).
+hardware with a Fitbit Charge 6. Linux builds include an experimental BlueZ/D-Bus BLE
+backend. macOS builds run with a simulated source.
 
 ## Quick start (Windows 11)
 
@@ -110,6 +110,7 @@ On any platform — synthetic heart rate, optionally forwarded over OSC:
 
 ```sh
 dotnet run --project src/PulseRelay.Probe -f net10.0 -- mock --osc
+dotnet run --project src/PulseRelay.Probe -f net10.0 -- mock --interval-ms 1 --sample-count 1
 ```
 
 On Windows 11 — real BLE (see [docs/charge6-verification.md](docs/charge6-verification.md)
@@ -118,6 +119,13 @@ for the full checklist):
 ```sh
 dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- scan --service 180D --verbose
 dotnet run --project src/PulseRelay.Probe -f net10.0-windows10.0.19041.0 -- connect --name "Charge 6" --verbose
+```
+
+On Linux with BlueZ running on the system bus — experimental real BLE:
+
+```sh
+dotnet run --project src/PulseRelay.Probe -f net10.0 -- scan --service 180D --verbose
+dotnet run --project src/PulseRelay.Probe -f net10.0 -- connect --name "Charge 6" --verbose
 ```
 
 PulseRelay deliberately does not use the Fitbit Web API, Google Health API, or any cloud

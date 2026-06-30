@@ -18,6 +18,19 @@ public class ProbeOptionsTests
         Assert.Equal("/avatar/parameters/VRCOSC/Heartrate/Value", options.OscAddress);
         Assert.Equal(1000, options.IntervalMs);
         Assert.Equal(30, options.TimeoutSec);
+        Assert.Null(options.SampleCount);
+    }
+
+    [Fact]
+    public void Parses_mock_sample_count()
+    {
+        Assert.True(ProbeOptions.TryParse(
+            ["mock", "--interval-ms", "1", "--sample-count", "3"],
+            out var options,
+            out string error));
+
+        Assert.Empty(error);
+        Assert.Equal(3, options.SampleCount);
     }
 
     [Fact]
@@ -163,6 +176,7 @@ public class ProbeOptionsTests
     [InlineData("mock", "--service", "180D")]
     [InlineData("scan", "--name", "Charge")]
     [InlineData("connect", "--interval-ms", "500")]
+    [InlineData("connect", "--sample-count", "1")]
     public void Rejects_options_that_do_not_apply_to_command(params string[] args)
     {
         Assert.False(ProbeOptions.TryParse(args, out _, out string error));
@@ -190,6 +204,7 @@ public class ProbeOptionsTests
     [InlineData("--osc-port")]
     [InlineData("--timeout-sec")]
     [InlineData("--interval-ms")]
+    [InlineData("--sample-count")]
     public void Rejects_missing_integer_value(string option)
     {
         Assert.False(ProbeOptions.TryParse(["mock", option], out _, out string error));
@@ -212,6 +227,7 @@ public class ProbeOptionsTests
     [InlineData("--osc-port", "0")]
     [InlineData("--timeout-sec", "-1")]
     [InlineData("--interval-ms", "abc")]
+    [InlineData("--sample-count", "0")]
     public void Rejects_non_positive_or_non_numeric_integer_values(string option, string value)
     {
         Assert.False(ProbeOptions.TryParse(["mock", option, value], out _, out string error));
