@@ -32,11 +32,15 @@ public class BridgeSupervisorTests
             Supervisor.Snapshot.EffectiveStatus(Now, Supervisor.StaleThreshold);
 
         /// <summary>Pumps real continuations (no fake-time advance) until the condition holds.</summary>
-        public async Task WaitForAsync(Func<SupervisorSnapshot, bool> condition, string description)
+        public Task WaitForAsync(Func<SupervisorSnapshot, bool> condition, string description) =>
+            WaitForAsync(() => condition(Supervisor.Snapshot), description);
+
+        /// <summary>Pumps real continuations (no fake-time advance) until the condition holds.</summary>
+        public async Task WaitForAsync(Func<bool> condition, string description)
         {
             for (int i = 0; i < 500; i++)
             {
-                if (condition(Supervisor.Snapshot))
+                if (condition())
                 {
                     return;
                 }
@@ -110,8 +114,10 @@ public class BridgeSupervisorTests
 
         await h.WaitForAsync(s => s.RunState == BridgeRunState.Reconnecting, "retry scheduled");
         h.Time.Advance(TimeSpan.FromSeconds(1));
-        await Task.Delay(20);
 
+        // Deterministic sync point: once the loop has called StopAsync on the previous
+        // source it is provably parked on the stop gate, before any factory call.
+        await h.WaitForAsync(() => h.Factory.Latest.StopCalls > 0, "loop parked on previous source stop");
         Assert.Single(h.Factory.Created);
 
         stopGate.SetResult();
@@ -365,7 +371,8 @@ public class BridgeSupervisorTests
         await h.WaitForAsync(s => s.Session.Status == BridgeStatus.WaitingForData, "connected");
         await h.Supervisor.StopAsync();
         h.Time.Advance(TimeSpan.FromMinutes(30));
-        await Task.Delay(20);
+        // Awaiting the monitor proves it ran to completion without raising the event.
+        await h.Supervisor.InitialConnectionMonitor!;
 
         Assert.False(timedOut);
         Assert.False(h.Supervisor.IsRunning);
@@ -408,7 +415,7 @@ public class BridgeSupervisorTests
         await h.StartAndStreamAsync();
 
         h.Time.Advance(TimeSpan.FromHours(1));
-        await Task.Delay(20);
+        await h.Supervisor.InitialConnectionMonitor!;
 
         Assert.False(timedOut);
         Assert.True(h.Supervisor.IsRunning);
@@ -431,7 +438,7 @@ public class BridgeSupervisorTests
         h.Supervisor.Start(h.Settings);
         await h.WaitForAsync(s => s.Session.Status == BridgeStatus.WaitingForData, "subscribed");
         h.Time.Advance(TimeSpan.FromHours(1));
-        await Task.Delay(20);
+        await h.Supervisor.InitialConnectionMonitor!;
 
         Assert.False(timedOut);
         Assert.True(h.Supervisor.IsRunning);

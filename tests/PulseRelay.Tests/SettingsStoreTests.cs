@@ -42,6 +42,7 @@ public class SettingsStoreTests : IDisposable
             OscPort = 9100,
             OscAddress = "/custom/path",
             Theme = AppTheme.Light,
+            Language = AppLanguage.Japanese,
             AutoConnectOnLaunch = true,
             HideToTrayOnClose = false,
             FirstRunCompleted = true,
@@ -58,6 +59,7 @@ public class SettingsStoreTests : IDisposable
         Assert.Equal(9100, loaded.OscPort);
         Assert.Equal("/custom/path", loaded.OscAddress);
         Assert.Equal(AppTheme.Light, loaded.Theme);
+        Assert.Equal(AppLanguage.Japanese, loaded.Language);
         Assert.True(loaded.AutoConnectOnLaunch);
         Assert.False(loaded.HideToTrayOnClose);
         Assert.True(loaded.FirstRunCompleted);

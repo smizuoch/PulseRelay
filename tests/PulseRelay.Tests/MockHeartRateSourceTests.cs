@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using PulseRelay.Core.HeartRate;
 using PulseRelay.Core.Sources;
 using Xunit;
@@ -90,20 +91,24 @@ public class MockHeartRateSourceTests
     [Fact]
     public async Task Stops_emitting_after_stop()
     {
-        var source = new MockHeartRateSource(interval: TimeSpan.FromMilliseconds(10));
+        var time = new FakeTimeProvider();
+        var source = new MockHeartRateSource(interval: TimeSpan.FromSeconds(1), timeProvider: time);
 
         var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         source.SampleReceived += (_, _) => received.TrySetResult();
 
         await source.StartAsync(CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         await source.StopAsync();
         Assert.Equal(HeartRateSourceState.Disconnected, source.State);
 
+        // StopAsync awaits the pump, so no timer remains registered with the provider;
+        // if stop failed to stop it, these ticks would emit deterministically.
         int countAfterStop = 0;
         source.SampleReceived += (_, _) => Interlocked.Increment(ref countAfterStop);
-        await Task.Delay(100, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(10));
 
         Assert.Equal(0, countAfterStop);
     }

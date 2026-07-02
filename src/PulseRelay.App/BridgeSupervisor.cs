@@ -66,6 +66,12 @@ public sealed class BridgeSupervisor : IAsyncDisposable
     /// </summary>
     public event EventHandler? InitialConnectionTimedOut;
 
+    /// <summary>
+    /// Test hook: the initial-connection timeout monitor of the current run, when one was
+    /// started. Awaiting it proves the monitor ran to completion.
+    /// </summary>
+    internal Task? InitialConnectionMonitor { get; private set; }
+
     public bool SupportsBle => _session.SupportsBle;
 
     public TimeSpan StaleThreshold => _session.StaleThreshold;
@@ -116,7 +122,7 @@ public sealed class BridgeSupervisor : IAsyncDisposable
             && settings.SourceKind == HeartRateSourceKind.Ble
             && _options.InitialConnectionTimeout is { } timeout)
         {
-            _ = MonitorInitialConnectionTimeoutAsync(generation, cts, timeout);
+            InitialConnectionMonitor = MonitorInitialConnectionTimeoutAsync(generation, cts, timeout);
         }
     }
 

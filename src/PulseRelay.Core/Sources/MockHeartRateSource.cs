@@ -17,6 +17,7 @@ public sealed class MockHeartRateSource : IHeartRateSource
     private readonly int _minBpm;
     private readonly int _maxBpm;
     private readonly ILogger _logger;
+    private readonly TimeProvider _timeProvider;
 
     private CancellationTokenSource? _cts;
     private Task? _pump;
@@ -25,7 +26,8 @@ public sealed class MockHeartRateSource : IHeartRateSource
         TimeSpan? interval = null,
         int minBpm = 60,
         int maxBpm = 100,
-        ILogger<MockHeartRateSource>? logger = null)
+        ILogger<MockHeartRateSource>? logger = null,
+        TimeProvider? timeProvider = null)
     {
         if (minBpm <= 0 || maxBpm < minBpm)
         {
@@ -41,6 +43,7 @@ public sealed class MockHeartRateSource : IHeartRateSource
         _minBpm = minBpm;
         _maxBpm = maxBpm;
         _logger = logger ?? NullLogger<MockHeartRateSource>.Instance;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public string Description => $"Mock (sine {_minBpm}-{_maxBpm} BPM every {_interval.TotalMilliseconds:0} ms)";
@@ -92,12 +95,12 @@ public sealed class MockHeartRateSource : IHeartRateSource
 
     private async Task PumpAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(_interval);
-        var start = DateTimeOffset.UtcNow;
+        using var timer = new PeriodicTimer(_interval, _timeProvider);
+        var start = _timeProvider.GetUtcNow();
 
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = _timeProvider.GetUtcNow();
             double phase = (now - start).TotalSeconds / SinePeriod.TotalSeconds * 2 * Math.PI;
             double mid = (_minBpm + _maxBpm) / 2.0;
             double amplitude = (_maxBpm - _minBpm) / 2.0;
