@@ -167,6 +167,46 @@ public sealed class BluezDbusHeartRateClientTests
     }
 
     [Fact]
+    public async Task Notification_is_delivered_once_after_advertisement_watch_is_active()
+    {
+        // Regression: the scan flow (WatchAdvertisementsAsync) already subscribes
+        // PropertiesChanged; StartNotify must not add a second subscription, or every
+        // Heart Rate Measurement is dispatched twice (double samples, double OSC sends).
+        var bus = new FakeBluezBus();
+        const string devicePath = "/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF";
+        const string characteristicPath = devicePath + "/service0012/char0014";
+        bus.Objects["/org/bluez/hci0"] = BluezObject.WithInterface(
+            BluezDbus.AdapterInterface,
+            new Dictionary<string, VariantValue>());
+        bus.Objects[devicePath] = Device(
+            "AA:BB:CC:DD:EE:FF",
+            "random",
+            "BLE Charge 6",
+            [BluezUuids.HeartRateService],
+            -48);
+        await using var client = new BluezDbusHeartRateClient(bus);
+
+        await client.StartDiscoveryAsync([BluezUuids.HeartRateService], "le", CancellationToken.None);
+        await using var enumerator = client.WatchAdvertisementsAsync(CancellationToken.None).GetAsyncEnumerator();
+        Assert.True(await enumerator.MoveNextAsync());
+
+        int deliveries = 0;
+        await client.StartNotifyAsync(
+            characteristicPath,
+            _ => Interlocked.Increment(ref deliveries),
+            CancellationToken.None);
+        bus.EmitPropertiesChanged(
+            characteristicPath,
+            BluezDbus.GattCharacteristicInterface,
+            new Dictionary<string, VariantValue>
+            {
+                ["Value"] = VariantValue.Array(new byte[] { 0x00, 72 }),
+            });
+
+        Assert.Equal(1, deliveries);
+    }
+
+    [Fact]
     public async Task StartDiscovery_fails_when_no_adapter_exists()
     {
         var bus = new FakeBluezBus();

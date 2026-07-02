@@ -9,8 +9,17 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
     private static readonly TimeSpan ServicesResolvedPollInterval = TimeSpan.FromMilliseconds(200);
     private readonly IBluezBus _bus;
     private readonly bool _ownsBus;
+
+    // Bounded with DropOldest: discovery stays on for the whole session, but nothing reads
+    // advertisements once the scan phase has picked a device, so an unbounded channel would
+    // accumulate every nearby advertisement/RSSI change for hours.
     private readonly Channel<BluezDeviceAdvertisement> _advertisements =
-        Channel.CreateUnbounded<BluezDeviceAdvertisement>();
+        Channel.CreateBounded<BluezDeviceAdvertisement>(
+            new BoundedChannelOptions(256) { FullMode = BoundedChannelFullMode.DropOldest });
+
+    // Guards the dictionaries and watch flags below: D-Bus signal callbacks arrive on the
+    // bus read loop while the scan/subscribe flow mutates the same state from caller threads.
+    private readonly object _gate = new();
     private readonly Dictionary<string, Dictionary<string, IReadOnlyDictionary<string, VariantValue>>> _knownInterfaces = [];
     private readonly Dictionary<string, Action<byte[]>> _notificationHandlers = [];
     private readonly List<IDisposable> _subscriptions = [];
@@ -85,7 +94,11 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
         var objects = await _bus.GetManagedObjectsAsync(cancellationToken).ConfigureAwait(false);
         foreach (var (path, obj) in objects)
         {
-            RememberInterfaces(path, obj.Interfaces);
+            lock (_gate)
+            {
+                RememberInterfaces(path, obj.Interfaces);
+            }
+
             if (TryCreateAdvertisement(path, obj.Interfaces, out var advertisement))
             {
                 _advertisements.Writer.TryWrite(advertisement);
@@ -160,7 +173,11 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
         Action<byte[]> notificationHandler,
         CancellationToken cancellationToken)
     {
-        _notificationHandlers[characteristicPath] = notificationHandler;
+        lock (_gate)
+        {
+            _notificationHandlers[characteristicPath] = notificationHandler;
+        }
+
         await EnsurePropertiesWatchAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -174,14 +191,22 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
         }
         catch (Exception ex) when (IsPairingRequired(ex))
         {
-            _notificationHandlers.Remove(characteristicPath);
+            lock (_gate)
+            {
+                _notificationHandlers.Remove(characteristicPath);
+            }
+
             throw new BluezPairingRequiredException("BlueZ requires pairing before notifications can start.", ex);
         }
     }
 
     public async Task StopNotifyAsync(string characteristicPath)
     {
-        _notificationHandlers.Remove(characteristicPath);
+        lock (_gate)
+        {
+            _notificationHandlers.Remove(characteristicPath);
+        }
+
         await _bus.CallMethodAsync(
             characteristicPath,
             BluezDbus.GattCharacteristicInterface,
@@ -202,12 +227,18 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var subscription in _subscriptions)
+        IDisposable[] subscriptions;
+        lock (_gate)
+        {
+            subscriptions = [.. _subscriptions];
+            _subscriptions.Clear();
+        }
+
+        foreach (var subscription in subscriptions)
         {
             subscription.Dispose();
         }
 
-        _subscriptions.Clear();
         if (_ownsBus)
         {
             await _bus.DisposeAsync().ConfigureAwait(false);
@@ -234,28 +265,48 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
 
     private async Task EnsureAdvertisementWatchAsync(CancellationToken cancellationToken)
     {
-        if (_watchingAdvertisements)
+        lock (_gate)
         {
-            return;
+            if (_watchingAdvertisements)
+            {
+                return;
+            }
+
+            _watchingAdvertisements = true;
+            // This watch already subscribes PropertiesChanged; a later StartNotify must not
+            // add a second subscription or every notification is dispatched twice.
+            _watchingProperties = true;
         }
 
-        _watchingAdvertisements = true;
-        _subscriptions.Add(await _bus.WatchInterfacesAddedAsync(OnInterfacesAdded, cancellationToken)
-            .ConfigureAwait(false));
-        _subscriptions.Add(await _bus.WatchPropertiesChangedAsync(OnPropertiesChanged, cancellationToken)
-            .ConfigureAwait(false));
+        var interfacesAdded = await _bus.WatchInterfacesAddedAsync(OnInterfacesAdded, cancellationToken)
+            .ConfigureAwait(false);
+        var propertiesChanged = await _bus.WatchPropertiesChangedAsync(OnPropertiesChanged, cancellationToken)
+            .ConfigureAwait(false);
+        lock (_gate)
+        {
+            _subscriptions.Add(interfacesAdded);
+            _subscriptions.Add(propertiesChanged);
+        }
     }
 
     private async Task EnsurePropertiesWatchAsync(CancellationToken cancellationToken)
     {
-        if (_watchingProperties)
+        lock (_gate)
         {
-            return;
+            if (_watchingProperties)
+            {
+                return;
+            }
+
+            _watchingProperties = true;
         }
 
-        _watchingProperties = true;
-        _subscriptions.Add(await _bus.WatchPropertiesChangedAsync(OnPropertiesChanged, cancellationToken)
-            .ConfigureAwait(false));
+        var propertiesChanged = await _bus.WatchPropertiesChangedAsync(OnPropertiesChanged, cancellationToken)
+            .ConfigureAwait(false);
+        lock (_gate)
+        {
+            _subscriptions.Add(propertiesChanged);
+        }
     }
 
     private async Task WaitForServicesResolvedAsync(
@@ -282,7 +333,11 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
 
     private void OnInterfacesAdded(BluezInterfacesAdded added)
     {
-        RememberInterfaces(added.ObjectPath, added.Interfaces);
+        lock (_gate)
+        {
+            RememberInterfaces(added.ObjectPath, added.Interfaces);
+        }
+
         if (TryCreateAdvertisement(added.ObjectPath, added.Interfaces, out var advertisement))
         {
             _advertisements.Writer.TryWrite(advertisement);
@@ -294,22 +349,30 @@ public sealed class BluezDbusHeartRateClient : IBluezHeartRateClient
         if (changed.Interface == BluezDbus.DeviceInterface
             && changed.Changed.Count > 0)
         {
-            MergeProperties(changed.ObjectPath, changed.Interface, changed.Changed);
-            if (_knownInterfaces.TryGetValue(changed.ObjectPath, out var interfaces)
-                && TryCreateAdvertisement(changed.ObjectPath, interfaces, out var advertisement))
+            lock (_gate)
             {
-                _advertisements.Writer.TryWrite(advertisement);
+                MergeProperties(changed.ObjectPath, changed.Interface, changed.Changed);
+                if (_knownInterfaces.TryGetValue(changed.ObjectPath, out var interfaces)
+                    && TryCreateAdvertisement(changed.ObjectPath, interfaces, out var advertisement))
+                {
+                    _advertisements.Writer.TryWrite(advertisement);
+                }
             }
         }
 
         if (changed.Interface != BluezDbus.GattCharacteristicInterface
-            || !changed.Changed.TryGetValue("Value", out var value)
-            || !_notificationHandlers.TryGetValue(changed.ObjectPath, out var handler))
+            || !changed.Changed.TryGetValue("Value", out var value))
         {
             return;
         }
 
-        handler(value.GetArray<byte>());
+        Action<byte[]>? handler;
+        lock (_gate)
+        {
+            _notificationHandlers.TryGetValue(changed.ObjectPath, out handler);
+        }
+
+        handler?.Invoke(value.GetArray<byte>());
     }
 
     private static bool TryCreateAdvertisement(
