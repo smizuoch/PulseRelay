@@ -2,6 +2,11 @@
 
 日本語版は [README.ja.md](README.ja.md) をご覧ください。
 
+<a href="https://apps.microsoft.com/store/detail/9NR145NMMWHK?cid=DevShareMCLPCS">
+  <img src="docs/assets/microsoft-store-badge.svg" alt="Get it from Microsoft" width="180">
+</a>
+
+
 PulseRelay is a local bridge between Bluetooth LE heart-rate devices and OSC-compatible
 applications. It connects directly to any tracker that implements the standard Bluetooth
 **Heart Rate Service (0x180D)** — no phone, no cloud, no vendor API in the real-time path —
@@ -13,6 +18,10 @@ hardware with a Fitbit Charge 6. Linux builds include an experimental BlueZ/D-Bu
 backend. macOS builds run with a simulated source.
 
 ## Quick start (Windows 11)
+
+If you just want to use PulseRelay and do not plan to work on the source code,
+install the [Microsoft Store version](https://apps.microsoft.com/store/detail/9NR145NMMWHK?cid=DevShareMCLPCS).
+The commands below are for running from source.
 
 ```sh
 dotnet run --project src/PulseRelay.Desktop -f net10.0-windows10.0.19041.0

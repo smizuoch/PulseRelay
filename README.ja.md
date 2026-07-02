@@ -2,6 +2,11 @@
 
 English version: [README.md](README.md)
 
+<a href="https://apps.microsoft.com/store/detail/9NR145NMMWHK?cid=DevShareMCLPCS">
+  <img src="docs/assets/microsoft-store-badge.svg" alt="Microsoft Store から入手" width="180">
+</a>
+
+
 PulseRelay は、Bluetooth LE 心拍数デバイスと OSC 対応アプリをローカルでつなぐブリッジです。
 Bluetooth 標準の **Heart Rate Service (0x180D)** を実装したトラッカーに直接接続し、
 BPM を UDP 経由でローカルの OSC エンドポイント（例: VRChat）へ転送します。
@@ -13,6 +18,10 @@ Fitbit Charge 6 の実機で確認済みです。Linux ビルドには実験的�
 バックエンドが入っています。macOS ではシミュレーションソースで動作します。
 
 ## クイックスタート（Windows 11）
+
+ソースコードを触らずに使うだけなら、まず
+[Microsoft Store 版](https://apps.microsoft.com/store/detail/9NR145NMMWHK?cid=DevShareMCLPCS)
+をインストールしてください。以下のコマンドはソースから実行する場合の手順です。
 
 ```sh
 dotnet run --project src/PulseRelay.Desktop -f net10.0-windows10.0.19041.0
